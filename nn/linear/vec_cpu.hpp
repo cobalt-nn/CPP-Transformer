@@ -2,13 +2,13 @@
 
 #include <immintrin.h>
 #include "vec.hpp"
-#include "backend.hpp"
+#include "nn/backend/backend.hpp"
 
 namespace cobalt_715::nn::linear{
 
 //out = a + b
 template<>
-inline void add_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n){
+inline void add_alias_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n) noexcept{
   #ifdef __AVX__
   size_t i = 0;
   for(;i + 8 <= n;i += 8){
@@ -28,13 +28,13 @@ inline void add_safe<backend::CPU>(const float *a,const float *b,float *out,cons
 }
 
 template<>
-inline void add<backend::CPU>(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n){
-  add_safe<backend::CPU>(a,b,out,n);
+inline void add<backend::CPU>(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n) noexcept{
+  add_alias_safe<backend::CPU>(a,b,out,n);
 }
 
 //out = a - b
 template<>
-inline void sub_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n){
+inline void sub_alias_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n) noexcept{
   #ifdef __AVX__
   size_t i = 0;
   for(;i + 8 <= n;i += 8){
@@ -54,13 +54,13 @@ inline void sub_safe<backend::CPU>(const float *a,const float *b,float *out,cons
 }
 
 template<>
-inline void sub<backend::CPU>(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n){
-  sub_safe<backend::CPU>(a,b,out,n);
+inline void sub<backend::CPU>(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n) noexcept{
+  sub_alias_safe<backend::CPU>(a,b,out,n);
 }
 
 //out = a * b
 template<>
-inline void mul_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n){
+inline void mul_alias_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n) noexcept{
   #ifdef __AVX__
   size_t i = 0;
   for(;i + 8 <= n;i += 8){
@@ -80,13 +80,13 @@ inline void mul_safe<backend::CPU>(const float *a,const float *b,float *out,cons
 }
 
 template<>
-inline void mul<backend::CPU>(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n){
-  mul_safe<backend::CPU>(a,b,out,n);
+inline void mul<backend::CPU>(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n) noexcept{
+  mul_alias_safe<backend::CPU>(a,b,out,n);
 }
 
 //out = a / b
 template<>
-inline void div_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n){
+inline void div_alias_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n) noexcept{
   #ifdef __AVX__
   size_t i = 0;
   for(;i + 8 <= n;i += 8){
@@ -106,13 +106,13 @@ inline void div_safe<backend::CPU>(const float *a,const float *b,float *out,cons
 }
 
 template<>
-inline void div<backend::CPU>(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n){
-  div_safe<backend::CPU>(a,b,out,n);
+inline void div<backend::CPU>(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n) noexcept{
+  div_alias_safe<backend::CPU>(a,b,out,n);
 }
 
 //out = a * b + c
 template<>
-inline void fma_safe<backend::CPU>(const float *a,const float *b,const float *c,float *out,const size_t n){
+inline void fma_alias_safe<backend::CPU>(const float *a,const float *b,const float *c,float *out,const size_t n) noexcept{
   #ifdef __AVX__
   size_t i = 0;
   for(;i + 8 <= n;i += 8){
@@ -133,13 +133,13 @@ inline void fma_safe<backend::CPU>(const float *a,const float *b,const float *c,
 }
 
 template<>
-inline void fma<backend::CPU>(const float*__restrict a,const float*__restrict b,const float*__restrict c,float*__restrict out,const size_t n){
-  fma_safe<backend::CPU>(a,b,c,out,n);
+inline void fma<backend::CPU>(const float*__restrict a,const float*__restrict b,const float*__restrict c,float*__restrict out,const size_t n) noexcept{
+  fma_alias_safe<backend::CPU>(a,b,c,out,n);
 }
 
 //out[i] = a[i] * c
 template<>
-inline void scale_safe<backend::CPU>(const float *a,const float c,float *out,const size_t n){
+inline void scale_alias_safe<backend::CPU>(const float *a,const float c,float *out,const size_t n) noexcept{
   #ifdef __AVX__
   __m256 vc = _mm256_set1_ps(c);
   size_t i = 0;
@@ -159,13 +159,13 @@ inline void scale_safe<backend::CPU>(const float *a,const float c,float *out,con
 }
 
 template<>
-inline void scale<backend::CPU>(const float*__restrict a,const float c,float*__restrict out,const size_t n){
-  scale_safe(a,c,out,n);
+inline void scale<backend::CPU>(const float*__restrict a,const float c,float*__restrict out,const size_t n) noexcept{
+  scale_alias_safe(a,c,out,n);
 }
 
 //out[i] = a[i] * c + b[i]
 template<>
-inline void axpy_safe<backend::CPU>(const float *a,const float c,const float *b,float *out,const size_t n){
+inline void axpy_alias_safe<backend::CPU>(const float *a,const float c,const float *b,float *out,const size_t n) noexcept{
   #ifdef __AVX__
   __m256 vc = _mm256_set1_ps(c);
   size_t i = 0;
@@ -186,8 +186,8 @@ inline void axpy_safe<backend::CPU>(const float *a,const float c,const float *b,
 }
 
 template<>
-inline void axpy<backend::CPU>(const float*__restrict a,const float c,const float*__restrict b,float*__restrict out,const size_t n){
-  axpy_safe(a,c,b,out,n);
+inline void axpy<backend::CPU>(const float*__restrict a,const float c,const float*__restrict b,float*__restrict out,const size_t n) noexcept{
+  axpy_alias_safe(a,c,b,out,n);
 }
 
 }//namespace cobalt_715::nn::linear

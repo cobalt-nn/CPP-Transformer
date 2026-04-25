@@ -1,7 +1,8 @@
 #include <iostream>
 #include <vector>
-#include "vec.hpp"
-#include "vec_cpu.hpp"
+#include "nn/linear/vec.hpp"
+#include "nn/linear/vec_cpu.hpp"
+#include "nn/linear/Tensor.hpp"
 
 using namespace cobalt_715::nn::linear;
 
