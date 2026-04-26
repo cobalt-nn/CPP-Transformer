@@ -4,9 +4,9 @@
 #include "vec.hpp"
 #include "nn/backend/backend.hpp"
 
-namespace cobalt_715::nn::linear{
+namespace cobalt_715::nn::linear::vec{
 
-//out = a + b
+//out[i] = a[i] + b[i]
 template<>
 inline void add_alias_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n) noexcept{
   #ifdef __AVX__
@@ -32,7 +32,7 @@ inline void add<backend::CPU>(const float*__restrict a,const float*__restrict b,
   add_alias_safe<backend::CPU>(a,b,out,n);
 }
 
-//out = a - b
+//out[i] = a[i] - b[i]
 template<>
 inline void sub_alias_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n) noexcept{
   #ifdef __AVX__
@@ -58,7 +58,7 @@ inline void sub<backend::CPU>(const float*__restrict a,const float*__restrict b,
   sub_alias_safe<backend::CPU>(a,b,out,n);
 }
 
-//out = a * b
+//out[i] = a[i] * b[i]
 template<>
 inline void mul_alias_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n) noexcept{
   #ifdef __AVX__
@@ -84,7 +84,7 @@ inline void mul<backend::CPU>(const float*__restrict a,const float*__restrict b,
   mul_alias_safe<backend::CPU>(a,b,out,n);
 }
 
-//out = a / b
+//out[i] = a[i] / b[i]
 template<>
 inline void div_alias_safe<backend::CPU>(const float *a,const float *b,float *out,const size_t n) noexcept{
   #ifdef __AVX__
@@ -110,7 +110,7 @@ inline void div<backend::CPU>(const float*__restrict a,const float*__restrict b,
   div_alias_safe<backend::CPU>(a,b,out,n);
 }
 
-//out = a * b + c
+//out[i] = a[i] * b[i] + c[i]
 template<>
 inline void fma_alias_safe<backend::CPU>(const float *a,const float *b,const float *c,float *out,const size_t n) noexcept{
   #ifdef __AVX__

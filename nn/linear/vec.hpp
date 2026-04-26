@@ -3,37 +3,37 @@
 #include "nn/backend/backend.hpp"
 
 //基本的なベクトル演算を用意している
-namespace cobalt_715::nn::linear{
+namespace cobalt_715::nn::linear::vec{
 
-//out = a + b
+//out[i] = a[i] + b[i]
 template<typename BackendT = backend::CPU>
 inline void add_alias_safe(const float *a,const float *b,float *out,const size_t n) noexcept = delete;
 
 template<typename BackendT = backend::CPU>
 inline void add(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n) noexcept = delete;
 
-//out = a - b
+//out[i] = a[i] - b[i]
 template<typename BackendT = backend::CPU>
 inline void sub_alias_safe(const float *a,const float *b,float *out,const size_t n) noexcept = delete;
 
 template<typename BackendT = backend::CPU>
 inline void sub(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n) noexcept = delete;
 
-//out = a * b
+//out[i] = a[i] * b[i]
 template<typename BackendT = backend::CPU>
 inline void mul_alias_safe(const float *a,const float *b,float *out,const size_t n) noexcept = delete;
 
 template<typename BackendT = backend::CPU>
 inline void mul(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n) noexcept = delete;
 
-//out = a / b
+//out[i] = a[i] / b[i]
 template<typename BackendT = backend::CPU>
 inline void div_alias_safe(const float *a,const float *b,float *out,const size_t n) noexcept = delete;
 
 template<typename BackendT = backend::CPU>
 inline void div(const float*__restrict a,const float*__restrict b,float*__restrict out,const size_t n) noexcept = delete;
 
-//out = a * b + c
+//out[i] = a[i] * b[i] + c[i]
 template<typename BackendT = backend::CPU>
 inline void fma_alias_safe(const float *a,const float *b,const float *c,float *out,const size_t n) noexcept = delete;
 

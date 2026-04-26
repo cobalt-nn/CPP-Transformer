@@ -16,13 +16,15 @@ int main(){
     b[i] = -i;
   }
 
-  axpy(a.data(),2.0,b.data(),out.data(),100);
+  Tensor at({2,5,10},a);
+  Tensor bt({2,5,10},b);
 
-  for(float f:out){
-    std::cout << f << " ";
-  }
+  Tensor ot({2,5,10});
 
-  std::cout.flush();
+  //ot = at + bt;
+  Tensor::scale(at,2,ot);
+
+  std::cout << ot.to_string() << std::endl;
 
   return 0;
 }

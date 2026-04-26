@@ -9,8 +9,179 @@
 #include "vec.hpp"
 #include "vec_cpu.hpp"
 
+namespace cobalt_715::nn::linear{
+
 //任意次元テンソル
 class Tensor{
+public:
+  //コンストラクタ
+  Tensor(const std::vector<size_t> &shape) : shape_(shape),stride_(make_stride()){
+    size_t data_size = 1;
+    for(size_t u:shape_){
+      data_size *= u;
+    }
+    data_.resize(data_size);
+    check_invariants();
+  }
+
+  Tensor(const std::vector<size_t> &shape,const std::vector<float> &data) : shape_(shape),stride_(make_stride()),data_(data){
+    check_invariants();
+  }
+
+  float& at(const std::vector<size_t>& a){
+    check_index(a);
+    //check_invariants();
+    size_t index = 0;
+    for(size_t i = 0;i < a.size();i++){
+      index += a[i] * stride_[i];
+    }
+    return data_[index];
+  }
+
+  const float& at(const std::vector<size_t>& a) const{
+    check_index(a);
+    //check_invariants();
+    size_t index = 0;
+    for(size_t i = 0;i < a.size();i++){
+      index += a[i] * stride_[i];
+    }
+    return data_[index];
+  }
+
+  const std::vector<size_t>& shape() const noexcept{
+    return shape_;
+  }
+
+  const std::vector<size_t>& stride() const noexcept{
+    return stride_;
+  }
+
+  size_t numel() const noexcept{
+    return data_.size();
+  }
+
+  //ポインタを返しているため気を付けること
+  float* data() noexcept{return data_.data();}
+  const float* data() const noexcept{return data_.data();}
+
+  std::span<float> span() noexcept{
+    return std::span<float>(data_);
+  }
+
+  std::span<const float> span() const noexcept{
+    return std::span<const float>(data_);
+  }
+
+  //out[i] = a[i] + b[i]
+  inline static void add(const Tensor &a,const Tensor &b,Tensor &out){
+    #ifndef NDEBUG
+    if(a.shape() != out.shape() || a.shape() != b.shape()) throw std::invalid_argument("Tensor::add dimension mismatch");
+    #endif
+    vec::add(a.data(),b.data(),out.data(),a.numel());
+  }
+
+  inline Tensor operator+(const Tensor &rhs) const{
+    Tensor out(shape_);
+    add(*this,rhs,out);
+    return out;
+  }
+
+  inline Tensor& operator+=(const Tensor &rhs){
+    #ifndef NDEBUG
+    if(this->shape() != rhs.shape()) throw std::invalid_argument("Tensor::+= dimension mismatch");
+    #endif
+    vec::add_alias_safe(data(),rhs.data(),data(),numel());
+    return *this;
+  }
+
+  //out[i] = a[i] - b[i]
+  inline static void sub(const Tensor &a,const Tensor &b,Tensor &out){
+    #ifndef NDEBUG
+    if(a.shape() != out.shape() || a.shape() != b.shape()) throw std::invalid_argument("Tensor::sub dimension mismatch");
+    #endif
+    vec::sub(a.data(),b.data(),out.data(),a.numel());
+  }
+
+  inline Tensor operator-(const Tensor &rhs) const{
+    Tensor out(shape_);
+    sub(*this,rhs,out);
+    return out;
+  }
+
+  inline Tensor& operator-=(const Tensor &rhs){
+    #ifndef NDEBUG
+    if(this->shape() != rhs.shape()) throw std::invalid_argument("Tensor::-= dimension mismatch");
+    #endif
+    vec::sub_alias_safe(data(),rhs.data(),data(),numel());
+    return *this;
+  }
+
+  //out[i] = a[i] * b[i]
+  inline static void hadamard(const Tensor &a,const Tensor &b,Tensor &out){
+    #ifndef NDEBUG
+    if(a.shape() != out.shape() || a.shape() != b.shape()) throw std::invalid_argument("Tensor::hadamard dimension mismatch");
+    #endif
+    vec::mul(a.data(),b.data(),out.data(),a.numel());
+  }
+
+  inline void hadamard_(const Tensor &rhs){
+    #ifndef NDEBUG
+    if(shape_ != rhs.shape()) throw std::invalid_argument("Tensor::hadamard_ dimension mismatch");
+    #endif
+    vec::mul_alias_safe(data(),rhs.data(),data(),numel());
+  }
+
+  //out[i] = a[i] * c
+  inline static void scale(const Tensor &a,const float c,Tensor &out){
+    #ifndef NDEBUG
+    if(a.shape() != out.shape()) throw std::invalid_argument("Tensor::hadamard dimension mismatch");
+    #endif
+    vec::scale(a.data(),c,out.data(),a.numel());
+  }
+
+  inline void scale_(const float c){
+    vec::scale_alias_safe(data(),c,data(),numel());
+  }
+
+  std::string to_string(const int indent_size = 2) const{
+    std::string s = "//shape = ";
+
+    for(size_t u:shape_) s += std::to_string(u) + " ";
+
+    s += "\n";
+
+    std::vector<size_t> index(shape_.size(),0);
+
+    size_t dim = 0;
+
+    to_string_recursive(s,index,dim,indent_size);
+
+    return s;
+  }
+
+  void to_string_recursive(std::string &s,std::vector<size_t> &index,size_t dim,const int indent_size = 2) const{
+    s += std::string(indent_size * dim,' ') + "{";
+
+    for(size_t i = 0;i < shape_.at(dim);i++){
+      index.at(dim) = i;
+
+      if(dim == shape_.size() - 1){
+        s += " " + std::to_string(at(index)) + " ";
+      }else{
+        s += "\n";
+        to_string_recursive(s,index,dim + 1,indent_size);
+      }
+
+      if(i != shape_.at(dim) - 1) s += ",";
+    }
+
+    if(dim == shape_.size() - 1){
+      s += "}";
+    }else{
+      s += "\n" + std::string(indent_size * dim,' ') + "}";
+    }
+  }
+
 private:
   std::vector<size_t> shape_;//各次元の要素数
   std::vector<size_t> stride_;//各次元にジャンプするまでに必要な数
@@ -77,45 +248,6 @@ private:
     }
     return str;
   }
-
-public:
-  float& at(const std::vector<size_t>& a){
-    check_index(a);
-    //check_invariants();
-    size_t index = 0;
-    for(size_t i = 0;i < a.size();i++){
-      index += a[i] * stride_[i];
-    }
-    return data_[index];
-  }
-
-  const float& at(const std::vector<size_t>& a) const{
-    check_index(a);
-    //check_invariants();
-    size_t index = 0;
-    for(size_t i = 0;i < a.size();i++){
-      index += a[i] * stride_[i];
-    }
-    return data_[index];
-  }
-
-  const std::vector<size_t>& shape() const noexcept{
-    return shape_;
-  }
-
-  const std::vector<size_t>& stride() const noexcept{
-    return stride_;
-  }
-
-  //ポインタを返しているため気を付けること
-  float* data() noexcept{return data_.data();}
-  const float* data() const noexcept{return data_.data();}
-
-  std::span<float> span() noexcept{
-    return std::span<float>(data_);
-  }
-
-  std::span<const float> span() const noexcept{
-    return std::span<const float>(data_);
-  }
 };
+
+}//namespace cobalt_715::nn::linear
