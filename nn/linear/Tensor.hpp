@@ -15,48 +15,48 @@ namespace cobalt_715::nn::linear{
 class Tensor{
 public:
   //コンストラクタ
-  Tensor(const std::vector<size_t> &shape) : shape_(shape),stride_(make_stride()){
-    size_t data_size = 1;
-    for(size_t u:shape_){
-      data_size *= u;
+  Tensor(const std::vector<int64_t> &shape) : shape_(shape),stride_(make_stride()){
+    int64_t data_size = 1;
+    for(int64_t i:shape_){
+      data_size *= i;
     }
     data_.resize(data_size);
     check_invariants();
   }
 
-  Tensor(const std::vector<size_t> &shape,const std::vector<float> &data) : shape_(shape),stride_(make_stride()),data_(data){
+  Tensor(const std::vector<int64_t> &shape,const std::vector<float> &data) : shape_(shape),stride_(make_stride()),data_(data){
     check_invariants();
   }
 
-  float& at(const std::vector<size_t>& a){
+  float& at(const std::vector<int64_t>& a){
     check_index(a);
     //check_invariants();
-    size_t index = 0;
-    for(size_t i = 0;i < a.size();i++){
+    int64_t index = 0;
+    for(int64_t i = 0;i < a.size();i++){
       index += a[i] * stride_[i];
     }
     return data_[index];
   }
 
-  const float& at(const std::vector<size_t>& a) const{
+  const float& at(const std::vector<int64_t>& a) const{
     check_index(a);
     //check_invariants();
-    size_t index = 0;
-    for(size_t i = 0;i < a.size();i++){
+    int64_t index = 0;
+    for(int64_t i = 0;i < a.size();i++){
       index += a[i] * stride_[i];
     }
     return data_[index];
   }
 
-  const std::vector<size_t>& shape() const noexcept{
+  const std::vector<int64_t>& shape() const noexcept{
     return shape_;
   }
 
-  const std::vector<size_t>& stride() const noexcept{
+  const std::vector<int64_t>& stride() const noexcept{
     return stride_;
   }
 
-  size_t numel() const noexcept{
+  int64_t numel() const noexcept{
     return data_.size();
   }
 
@@ -146,23 +146,23 @@ public:
   std::string to_string(const int indent_size = 2) const{
     std::string s = "//shape = ";
 
-    for(size_t u:shape_) s += std::to_string(u) + " ";
+    for(int64_t u:shape_) s += std::to_string(u) + " ";
 
     s += "\n";
 
-    std::vector<size_t> index(shape_.size(),0);
+    std::vector<int64_t> index(shape_.size(),0);
 
-    size_t dim = 0;
+    int64_t dim = 0;
 
     to_string_recursive(s,index,dim,indent_size);
 
     return s;
   }
 
-  void to_string_recursive(std::string &s,std::vector<size_t> &index,size_t dim,const int indent_size = 2) const{
+  void to_string_recursive(std::string &s,std::vector<int64_t> &index,int64_t dim,const int indent_size = 2) const{
     s += std::string(indent_size * dim,' ') + "{";
 
-    for(size_t i = 0;i < shape_.at(dim);i++){
+    for(int64_t i = 0;i < shape_.at(dim);i++){
       index.at(dim) = i;
 
       if(dim == shape_.size() - 1){
@@ -183,8 +183,8 @@ public:
   }
 
 private:
-  std::vector<size_t> shape_;//各次元の要素数
-  std::vector<size_t> stride_;//各次元にジャンプするまでに必要な数
+  std::vector<int64_t> shape_;//各次元の要素数
+  std::vector<int64_t> stride_;//各次元にジャンプするまでに必要な数
   std::vector<float> data_;//data
 
   //shape_,stride_,data_の関係が合うかどうかとオーバーフローの確認をする
@@ -194,15 +194,15 @@ private:
     if(shape_.size() != stride_.size()) throw std::logic_error("Tensor invariant violation: shape and stride size mismatch");
 
     //data_のサイズがshape_と合っているかとオーバーフローしていないか確認する
-    size_t data_size = 1;
-    for(size_t i = 0;i < shape_.size();i++){
-      size_t dim = shape_[i];
+    int64_t data_size = 1;
+    for(int64_t i = 0;i < shape_.size();i++){
+      int64_t dim = shape_[i];
 
-      //0になっていないか確認する
-      if(dim == 0) throw std::invalid_argument("Tensor shape contains zero dimension");
+      //非負のみを許す
+      if(dim < 0) throw std::invalid_argument("Tensor shape contains negative dimension");
 
       //オーバーフローを確認する
-      if(dim > SIZE_MAX / data_size) throw std::overflow_error("Tensor size overflow");
+      if(dim > INT64_MAX / data_size) throw std::overflow_error("Tensor size overflow");
 
       data_size *= dim;
     }
@@ -214,7 +214,7 @@ private:
   }
 
   //indexが正しいか確認する
-  void check_index(const std::vector<size_t>& a) const{
+  void check_index(const std::vector<int64_t>& a) const{
     #ifndef NDEBUG
     if(a.size() != shape_.size()){
       throw std::invalid_argument(
@@ -225,7 +225,7 @@ private:
       );
     }
 
-    for(size_t i = 0;i < shape_.size();i++){
+    for(int64_t i = 0;i < shape_.size();i++){
       if(a[i] >= shape_[i]){
         throw std::out_of_range(
           "Tensor index out of bounds at dim " +
@@ -239,10 +239,10 @@ private:
   }
 
   //shape_を元にstride_を作る
-  std::vector<size_t> make_stride() const{
-    std::vector<size_t> str(shape_.size());
-    size_t stride_size = 1;
-    for(size_t i = shape_.size();i-- > 0;){
+  std::vector<int64_t> make_stride() const{
+    std::vector<int64_t> str(shape_.size());
+    int64_t stride_size = 1;
+    for(int64_t i = shape_.size();i-- > 0;){
       str[i] = stride_size;
       stride_size *= shape_[i];
     }

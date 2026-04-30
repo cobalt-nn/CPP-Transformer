@@ -3,6 +3,8 @@
 #include "nn/linear/vec.hpp"
 #include "nn/linear/vec_cpu.hpp"
 #include "nn/linear/Tensor.hpp"
+#include "nn/linear/TensorView.hpp"
+#include "nn/linear/MatrixView.hpp"
 
 using namespace cobalt_715::nn::linear;
 
@@ -16,15 +18,12 @@ int main(){
     b[i] = -i;
   }
 
-  Tensor at({2,5,10},a);
-  Tensor bt({2,5,10},b);
+  Tensor ta({2,5,10},a);
 
-  Tensor ot({2,5,10});
+  MatrixView m(5,7,10,&a[2]);
 
-  //ot = at + bt;
-  Tensor::scale(at,2,ot);
-
-  std::cout << ot.to_string() << std::endl;
+  std::cout << ta.to_string() << std::endl;
+  std::cout << m.to_string() << std::endl;
 
   return 0;
 }
