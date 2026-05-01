@@ -18,9 +18,10 @@ int main(){
     b[i] = -i;
   }
 
-  Tensor ta({2,5,10},a);
+  const Tensor ta({2,5,10},a);
 
-  MatrixView m(5,7,10,&a[2]);
+  //MatrixView m(5,7,10,&ta.data()[2]);
+  MatrixView m(5,7,0,0,&a[80]);
 
   std::cout << ta.to_string() << std::endl;
   std::cout << m.to_string() << std::endl;
