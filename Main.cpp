@@ -18,13 +18,20 @@ int main(){
     b[i] = -i;
   }
 
-  const Tensor ta({2,5,10},a);
+  Tensor ta({2,5,10},a);
 
-  //MatrixView m(5,7,10,&ta.data()[2]);
-  MatrixView m(5,7,0,0,&a[80]);
+  MatrixView m(5,5,10,2,&ta.data()[0]);
+  MatrixView m2(5,5,10,2,&ta.data()[50]);
+
+  std::cout << m.to_string() << std::endl;
+  std::cout << m2.to_string() << std::endl;
+
+  MatrixView::add(m,m,m2);
+
+  std::cout << m.to_string() << std::endl;
+  std::cout << m2.to_string() << std::endl;
 
   std::cout << ta.to_string() << std::endl;
-  std::cout << m.to_string() << std::endl;
 
   return 0;
 }

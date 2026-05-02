@@ -28,7 +28,7 @@ public:
     check_invariants();
   }
 
-  float& at(const std::vector<int64_t>& a){
+  inline float& at(const std::vector<int64_t>& a){
     check_index(a);
     //check_invariants();
     int64_t index = 0;
@@ -38,7 +38,7 @@ public:
     return data_[index];
   }
 
-  const float& at(const std::vector<int64_t>& a) const{
+  inline const float& at(const std::vector<int64_t>& a) const{
     check_index(a);
     //check_invariants();
     int64_t index = 0;
@@ -48,27 +48,27 @@ public:
     return data_[index];
   }
 
-  const std::vector<int64_t>& shape() const noexcept{
+  inline const std::vector<int64_t>& shape() const noexcept{
     return shape_;
   }
 
-  const std::vector<int64_t>& stride() const noexcept{
+  inline const std::vector<int64_t>& stride() const noexcept{
     return stride_;
   }
 
-  int64_t numel() const noexcept{
+  inline int64_t numel() const noexcept{
     return data_.size();
   }
 
   //ポインタを返しているため気を付けること
-  float* data() noexcept{return data_.data();}
-  const float* data() const noexcept{return data_.data();}
+  inline float* data() noexcept{return data_.data();}
+  inline const float* data() const noexcept{return data_.data();}
 
-  std::span<float> span() noexcept{
+  inline std::span<float> span() noexcept{
     return std::span<float>(data_);
   }
 
-  std::span<const float> span() const noexcept{
+  inline std::span<const float> span() const noexcept{
     return std::span<const float>(data_);
   }
 

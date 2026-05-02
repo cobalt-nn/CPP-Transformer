@@ -1,7 +1,11 @@
 #pragma once
 
+//#include <iostream>
 #include <cstdint>
 #include <string>
+#include "vec.hpp"
+#include "vec_cpu.hpp"
+#include "ElementRef.hpp"
 
 namespace cobalt_715::nn::linear{
 
@@ -35,32 +39,96 @@ public:
     update_layout();
   }
 
-  float& at(const int64_t row,const int64_t col){
+  inline detail::ElementRef at(const int64_t row,const int64_t col){
+    #ifndef NDEBUG
+      return detail::ElementRef(&data_[row * row_stride_ + col * col_stride_],type_ != LayoutType::OVERLAPPED);
+    #else
+      return detail::ElementRef(&data_[row * row_stride_ + col * col_stride_]);
+    #endif
+  }
+
+  inline const float at(const int64_t row,const int64_t col) const{
     return data_[row * row_stride_ + col * col_stride_];
   }
 
-  const float& at(const int64_t row,const int64_t col) const{
-    return data_[row * row_stride_ + col * col_stride_];
-  }
-
-  const int64_t rows() const{
+  inline const int64_t rows() const noexcept{
     return rows_;
   }
 
-  const int64_t cols() const{
+  inline const int64_t cols() const noexcept{
     return cols_;
   }
 
-  const int64_t row_stride() const{
+  inline const int64_t row_stride() const noexcept{
     return row_stride_;
   }
 
-  const int64_t col_stride() const{
+  inline const int64_t col_stride() const noexcept{
     return col_stride_;
   }
 
-  const LayoutType layout() const{
+  inline const LayoutType layout() const noexcept{
     return type_;
+  }
+
+  inline const bool is_writable() const noexcept{
+    return type_ != LayoutType::OVERLAPPED;
+  }
+
+  inline int64_t numel() const noexcept{
+    return rows_ * cols_;
+  }
+
+  //生ポインタかつ何も保証していないので気を付けること
+  //at(0,0)であるということだけ
+  inline float* base_ptr() noexcept{return data_;}
+  inline const float* base_ptr() const noexcept{return data_;}
+
+  //out(i,j) = a(i,j) + b(i,j)
+  inline static void add(const MatrixView &a,const MatrixView &b,MatrixView &out){
+    #ifndef NDEBUG
+      if(a.rows() != b.rows() || a.cols() != b.cols() || a.rows() != out.rows() || a.cols() != out.cols()) throw std::invalid_argument("Matrix::add dimension mismatch");
+
+      if(!out.is_writable()) throw std::logic_error("Write to overlapped MatrixView");
+    #endif
+
+    if(a.layout() == LayoutType::CONTIGUOUS && b.layout() == LayoutType::CONTIGUOUS && out.layout() == LayoutType::CONTIGUOUS){
+      vec::add(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
+
+    }else if(a.layout() == LayoutType::ROW_CONTIGUOUS && b.layout() == LayoutType::ROW_CONTIGUOUS && out.layout() == LayoutType::ROW_CONTIGUOUS){
+      const float *ad = a.base_ptr();
+      const float *bd = b.base_ptr();
+      float *od = out.base_ptr();
+      for(int64_t i = 0;i < a.rows();i++){
+        int64_t stride = i * a.row_stride();
+        vec::add(ad + stride,bd + stride,od + stride,a.cols());
+      }
+    }else{
+      const float *ad = a.base_ptr();
+      const float *bd = b.base_ptr();
+      float *od = out.base_ptr();
+
+      const int64_t rows = a.rows();
+      const int64_t cols = a.cols();
+
+      const int64_t ars = a.row_stride();
+      const int64_t acs = a.col_stride();
+
+      const int64_t brs = b.row_stride();
+      const int64_t bcs = b.col_stride();
+
+      const int64_t ors = out.row_stride();
+      const int64_t ocs = out.col_stride();
+
+      for(int64_t i = 0;i < rows;i++){
+        for(int64_t j = 0;j < cols;j++){
+          od[j * ocs] = ad[j * acs] + bd[j * bcs];
+        }
+        ad += ars;
+        bd += brs;
+        od += ors;
+      }
+    }
   }
 
   std::string to_string() const{
