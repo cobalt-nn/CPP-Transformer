@@ -20,18 +20,16 @@ int main(){
 
   Tensor ta({2,5,10},a);
 
-  MatrixView m(5,5,10,2,&ta.data()[0]);
-  MatrixView m2(5,5,10,2,&ta.data()[50]);
+  MatrixView m1(5,3,10,1,&ta.data()[0]);
+  MatrixView m2(3,5,10,1,&ta.data()[5]);
 
-  std::cout << m.to_string() << std::endl;
-  std::cout << m2.to_string() << std::endl;
+  MatrixView m3(5,5,10,1,&ta.data()[50]);
 
-  MatrixView::add(m,m,m2);
+  MatrixView::matmul(m1,m2,m3);
 
-  std::cout << m.to_string() << std::endl;
-  std::cout << m2.to_string() << std::endl;
+  std::cout << m1.to_string() << "\n" << m2.to_string() << "\n" << m3.to_string() << std::endl;
 
-  std::cout << ta.to_string() << std::endl;
+  std::cout << m3.t().to_string() << std::endl;
 
   return 0;
 }
