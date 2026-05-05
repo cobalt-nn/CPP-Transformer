@@ -3,11 +3,11 @@
 //#include <iostream>
 #include <cstdint>
 #include <string>
-#include "vec.hpp"
-#include "vec_cpu.hpp"
+#include "nn/ops/vec.hpp"
+//#include "ops/vec_cpu.hpp"
 #include "ElementRef.hpp"
 
-namespace cobalt_715::nn::linear{
+namespace cobalt_715::nn::tensor{
 
 //Tensorなどから一部を行列として借用する
 class MatrixView{
@@ -88,18 +88,20 @@ public:
   static void matmul(const MatrixView &a,const MatrixView &b,MatrixView &out){
     #ifndef NDEBUG
       if(a.cols() != b.rows()) throw std::invalid_argument("Matrix::dot dimension mismatch");
-      if(out.rows() != a.rows() || out.cols() != b.cols()) throw std::invalid_argument("Matrix::dot_Bt dimension mismatch: out.rows() != a.rows() or out.cols() != b.cols()");
+      if(out.rows() != a.rows() || out.cols() != b.cols()) throw std::invalid_argument("Matrix::matmul dimension mismatch: out.rows() != a.rows() or out.cols() != b.cols()");
     #endif
 
     if(!out.is_writable()) throw std::logic_error("MatrixView::matmul Write to overlapped");
 
     for(int64_t i = 0;i < out.rows();i++){
-      for(int64_t j = 0;j < out.cols();j++){
-        float sum = 0;
-        for(int64_t k = 0;k < a.cols();k++){
-          sum += a.at(i,k) * b.at(k,j);
+      for(int64_t k = 0;k < a.cols();k++){
+        for(int64_t j = 0;j < out.cols();j++){
+          if(k == 0){
+            out.at(i,j) = a.at(i,k) * b.at(k,j);
+          }else{
+            out.at(i,j) += a.at(i,k) * b.at(k,j);
+          }
         }
-        out.at(i,j) = sum;
       }
     }
   }
@@ -111,7 +113,7 @@ public:
     #endif
 
     if(a.layout() == LayoutType::CONTIGUOUS && b.layout() == LayoutType::CONTIGUOUS && out.layout() == LayoutType::CONTIGUOUS){
-      vec::add(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
+      ops::vec::add(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
 
     }else if(a.layout() == LayoutType::ROW_CONTIGUOUS && b.layout() == LayoutType::ROW_CONTIGUOUS && out.layout() == LayoutType::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
@@ -123,7 +125,7 @@ public:
       const int64_t cols = a.cols();
 
       for(int64_t i = 0;i < a.rows();i++){
-        vec::add(ad,bd,od,cols);
+        ops::vec::add(ad,bd,od,cols);
 
         ad += stride;
         bd += stride;
@@ -170,7 +172,7 @@ public:
     #endif
 
     if(a.layout() == LayoutType::CONTIGUOUS && b.layout() == LayoutType::CONTIGUOUS && out.layout() == LayoutType::CONTIGUOUS){
-      vec::sub(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
+      ops::vec::sub(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
 
     }else if(a.layout() == LayoutType::ROW_CONTIGUOUS && b.layout() == LayoutType::ROW_CONTIGUOUS && out.layout() == LayoutType::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
@@ -182,7 +184,7 @@ public:
       const int64_t cols = a.cols();
 
       for(int64_t i = 0;i < a.rows();i++){
-        vec::sub(ad,bd,od,cols);
+        ops::vec::sub(ad,bd,od,cols);
 
         ad += stride;
         bd += stride;
@@ -229,7 +231,7 @@ public:
     #endif
 
     if(a.layout() == LayoutType::CONTIGUOUS && b.layout() == LayoutType::CONTIGUOUS && out.layout() == LayoutType::CONTIGUOUS){
-      vec::mul(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
+      ops::vec::mul(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
 
     }else if(a.layout() == LayoutType::ROW_CONTIGUOUS && b.layout() == LayoutType::ROW_CONTIGUOUS && out.layout() == LayoutType::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
@@ -241,7 +243,7 @@ public:
       const int64_t cols = a.cols();
 
       for(int64_t i = 0;i < a.rows();i++){
-        vec::mul(ad,bd,od,cols);
+        ops::vec::mul(ad,bd,od,cols);
 
         ad += stride;
         bd += stride;
@@ -288,7 +290,7 @@ public:
     #endif
 
     if(a.layout() == LayoutType::CONTIGUOUS && out.layout() == LayoutType::CONTIGUOUS){
-      vec::scale(a.base_ptr(),c,out.base_ptr(),a.numel());
+      ops::vec::scale(a.base_ptr(),c,out.base_ptr(),a.numel());
 
     }else if(a.layout() == LayoutType::ROW_CONTIGUOUS && out.layout() == LayoutType::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
@@ -299,7 +301,7 @@ public:
       const int64_t cols = a.cols();
 
       for(int64_t i = 0;i < a.rows();i++){
-        vec::scale(ad,c,od,cols);
+        ops::vec::scale(ad,c,od,cols);
 
         ad += stride;
         od += stride;
@@ -385,4 +387,4 @@ private:
   }
 };
 
-}//namespace cobalt_715::nn::linear
+}//namespace cobalt_715::nn::tensor

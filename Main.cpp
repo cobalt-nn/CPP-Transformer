@@ -1,12 +1,14 @@
 #include <iostream>
 #include <vector>
-#include "nn/linear/vec.hpp"
-#include "nn/linear/vec_cpu.hpp"
-#include "nn/linear/Tensor.hpp"
-#include "nn/linear/TensorView.hpp"
-#include "nn/linear/MatrixView.hpp"
+#include "nn/ops/vec.hpp"
+#include "nn/ops/vec_cpu.hpp"
+#include "nn/tensor/Tensor.hpp"
+#include "nn/tensor/TensorView.hpp"
+#include "nn/tensor/MatrixView.hpp"
 
-using namespace cobalt_715::nn::linear;
+#include "nn/layer/ILayer.hpp"
+
+using namespace cobalt_715::nn::tensor;
 
 int main(){
   std::vector<float> a(100);
@@ -29,7 +31,7 @@ int main(){
 
   std::cout << m1.to_string() << "\n" << m2.to_string() << "\n" << m3.to_string() << std::endl;
 
-  std::cout << m3.t().to_string() << std::endl;
+  std::cout << m3.t().to_string() << "\n" << ta.to_string() << std::endl;
 
   return 0;
 }

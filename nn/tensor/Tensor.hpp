@@ -6,10 +6,10 @@
 #include <stdexcept>
 #include <string>
 #include "nn/backend/backend.hpp"
-#include "vec.hpp"
-#include "vec_cpu.hpp"
+#include "nn/ops/vec.hpp"
+//#include "opsvec_cpu.hpp"
 
-namespace cobalt_715::nn::linear{
+namespace cobalt_715::nn::tensor{
 
 //任意次元テンソル
 class Tensor{
@@ -75,9 +75,9 @@ public:
   //out[i] = a[i] + b[i]
   inline static void add(const Tensor &a,const Tensor &b,Tensor &out){
     #ifndef NDEBUG
-    if(a.shape() != out.shape() || a.shape() != b.shape()) throw std::invalid_argument("Tensor::add dimension mismatch");
+      if(a.shape() != out.shape() || a.shape() != b.shape()) throw std::invalid_argument("Tensor::add dimension mismatch");
     #endif
-    vec::add(a.data(),b.data(),out.data(),a.numel());
+    ops::vec::add(a.data(),b.data(),out.data(),a.numel());
   }
 
   inline Tensor operator+(const Tensor &rhs) const{
@@ -88,18 +88,18 @@ public:
 
   inline Tensor& operator+=(const Tensor &rhs){
     #ifndef NDEBUG
-    if(this->shape() != rhs.shape()) throw std::invalid_argument("Tensor::+= dimension mismatch");
+      if(this->shape() != rhs.shape()) throw std::invalid_argument("Tensor::+= dimension mismatch");
     #endif
-    vec::add_alias_safe(data(),rhs.data(),data(),numel());
+    ops::vec::add_alias_safe(data(),rhs.data(),data(),numel());
     return *this;
   }
 
   //out[i] = a[i] - b[i]
   inline static void sub(const Tensor &a,const Tensor &b,Tensor &out){
     #ifndef NDEBUG
-    if(a.shape() != out.shape() || a.shape() != b.shape()) throw std::invalid_argument("Tensor::sub dimension mismatch");
+      if(a.shape() != out.shape() || a.shape() != b.shape()) throw std::invalid_argument("Tensor::sub dimension mismatch");
     #endif
-    vec::sub(a.data(),b.data(),out.data(),a.numel());
+    ops::vec::sub(a.data(),b.data(),out.data(),a.numel());
   }
 
   inline Tensor operator-(const Tensor &rhs) const{
@@ -110,37 +110,37 @@ public:
 
   inline Tensor& operator-=(const Tensor &rhs){
     #ifndef NDEBUG
-    if(this->shape() != rhs.shape()) throw std::invalid_argument("Tensor::-= dimension mismatch");
+      if(this->shape() != rhs.shape()) throw std::invalid_argument("Tensor::-= dimension mismatch");
     #endif
-    vec::sub_alias_safe(data(),rhs.data(),data(),numel());
+    ops::vec::sub_alias_safe(data(),rhs.data(),data(),numel());
     return *this;
   }
 
   //out[i] = a[i] * b[i]
   inline static void hadamard(const Tensor &a,const Tensor &b,Tensor &out){
     #ifndef NDEBUG
-    if(a.shape() != out.shape() || a.shape() != b.shape()) throw std::invalid_argument("Tensor::hadamard dimension mismatch");
+      if(a.shape() != out.shape() || a.shape() != b.shape()) throw std::invalid_argument("Tensor::hadamard dimension mismatch");
     #endif
-    vec::mul(a.data(),b.data(),out.data(),a.numel());
+    ops::vec::mul(a.data(),b.data(),out.data(),a.numel());
   }
 
   inline void hadamard_(const Tensor &rhs){
     #ifndef NDEBUG
-    if(shape_ != rhs.shape()) throw std::invalid_argument("Tensor::hadamard_ dimension mismatch");
+      if(shape_ != rhs.shape()) throw std::invalid_argument("Tensor::hadamard_ dimension mismatch");
     #endif
-    vec::mul_alias_safe(data(),rhs.data(),data(),numel());
+    ops::vec::mul_alias_safe(data(),rhs.data(),data(),numel());
   }
 
   //out[i] = a[i] * c
   inline static void scale(const Tensor &a,const float c,Tensor &out){
     #ifndef NDEBUG
-    if(a.shape() != out.shape()) throw std::invalid_argument("Tensor::hadamard dimension mismatch");
+      if(a.shape() != out.shape()) throw std::invalid_argument("Tensor::hadamard dimension mismatch");
     #endif
-    vec::scale(a.data(),c,out.data(),a.numel());
+    ops::vec::scale(a.data(),c,out.data(),a.numel());
   }
 
   inline void scale_(const float c){
-    vec::scale_alias_safe(data(),c,data(),numel());
+    ops::vec::scale_alias_safe(data(),c,data(),numel());
   }
 
   std::string to_string(const int indent_size = 2) const{
@@ -250,4 +250,4 @@ private:
   }
 };
 
-}//namespace cobalt_715::nn::linear
+}//namespace cobalt_715::nn::tensor

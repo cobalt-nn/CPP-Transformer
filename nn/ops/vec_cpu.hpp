@@ -4,7 +4,7 @@
 #include "vec.hpp"
 #include "nn/backend/backend.hpp"
 
-namespace cobalt_715::nn::linear::vec{
+namespace cobalt_715::nn::ops::vec{
 
 //out[i] = a[i] + b[i]
 template<>
@@ -190,4 +190,4 @@ inline void axpy<backend::CPU>(const float*__restrict a,const float c,const floa
   axpy_alias_safe(a,c,b,out,n);
 }
 
-}//namespace cobalt_715::nn::linear
+}//namespace cobalt_715::nn::ops::vec

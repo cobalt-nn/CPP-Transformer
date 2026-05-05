@@ -3,7 +3,7 @@
 #include "nn/backend/backend.hpp"
 
 //基本的なベクトル演算を用意している
-namespace cobalt_715::nn::linear::vec{
+namespace cobalt_715::nn::ops::vec{
 
 //out[i] = a[i] + b[i]
 template<typename BackendT = backend::CPU>
@@ -54,4 +54,4 @@ inline void axpy_alias_safe(const float *a,const float c,const float *b,float *o
 template<typename BackendT = backend::CPU>
 inline void axpy(const float*__restrict a,const float c,const float*__restrict b,float*__restrict out,const size_t n) noexcept = delete;
 
-}//namespace cobalt_715::nn::linear
+}//namespace cobalt_715::nn::ops::vec

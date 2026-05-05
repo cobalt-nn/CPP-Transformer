@@ -1,6 +1,6 @@
 #pragma once
 
-namespace cobalt_715::nn::linear::detail{
+namespace cobalt_715::nn::tensor::detail{
 
 //OVERLAPPEDの時、代入禁止にするため
 class ElementRef{
@@ -74,4 +74,4 @@ public:
   }
 };
 
-}//namespace cobalt_715::nn::linear::detail
+}//namespace cobalt_715::nn::tensor::detail

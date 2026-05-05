@@ -3,7 +3,7 @@
 #include <vector>
 #include <cstdint>
 
-namespace cobalt_715::nn::linear{
+namespace cobalt_715::nn::tensor{
 
 //Tensorの一部分を借用する
 class TensorView{
@@ -15,4 +15,4 @@ private:
   float *data_;//data
 };
 
-}//namespace cobalt_715::nn::linear
+}//namespace cobalt_715::nn::tensor
