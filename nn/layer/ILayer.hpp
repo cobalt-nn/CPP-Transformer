@@ -12,11 +12,12 @@ namespace cobalt_715::nn::layer{
 struct ILayer{
   //順伝播
   //前層の出力を受け取る
-  virtual tensor::Tensor forward(const tensor::Tensor& input,bool training=true) = 0;
+  //training=falseなら学習用にデータを保存しなくてもいい
+  virtual const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) = 0;
 
   //逆伝播
   //次の層の勾配を受け取る
-  virtual tensor::Tensor backward(const tensor::Tensor& grad_output_tensor) = 0;
+  virtual const tensor::Tensor& backward(const tensor::Tensor& grad_output) = 0;
 
   //更新
   //学習率、バッチサイズを受け取る
@@ -35,9 +36,6 @@ struct ILayer{
 
   //json形式で保存するとき使う
   virtual nlohmann::ordered_json to_json() const = 0;
-
-  //json形式で層をセットするとき使う
-  virtual void load_json(nlohmann::ordered_json j) = 0;
 
   //ランダム初期化する
   virtual void random_init(std::mt19937 &gen) = 0;

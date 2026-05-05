@@ -7,6 +7,9 @@
 #include "nn/tensor/MatrixView.hpp"
 
 #include "nn/layer/ILayer.hpp"
+#include "nn/layer/DenseLayer.hpp"
+#include "nn/ops/Activation.hpp"
+#include "nn/ops/Acts.hpp"
 
 using namespace cobalt_715::nn::tensor;
 
