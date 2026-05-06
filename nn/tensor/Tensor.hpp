@@ -65,11 +65,47 @@ public:
     return MatrixView(shape_.at(shape_.size() - 2),shape_.at(shape_.size() - 1),&data()[n]);
   }
 
+  const MatrixView as_matrix_view(const std::vector<int64_t> &index) const{
+    switch(shape_.size()){
+      case 0:
+        if(!index.empty()) throw std::invalid_argument("Tensor::as_matrix_view rank0 tensor: index must be empty");
+        return MatrixView(0,0,const_cast<float*>(data()));
+      case 1:
+        if(!index.empty()) throw std::invalid_argument("Tensor::as_matrix_view rank1 tensor: index must be empty");
+        return MatrixView(1,shape_.at(0),const_cast<float*>(data()));
+      case 2:
+        if(!index.empty()) throw std::invalid_argument("Tensor::as_matrix_view rank2 tensor: index must be empty");
+        return MatrixView(shape_.at(0),shape_.at(1),const_cast<float*>(data()));
+    }
+
+    if(index.size() + 2 != shape_.size()){
+      throw std::invalid_argument(
+        "Tensor::as_matrix_view index size mismatch: expected " + std::to_string(shape_.size() - 2) +
+        ", got " + std::to_string(index.size())
+      );
+    }
+
+    size_t n = 0;
+
+    for(size_t i = 0;i < index.size();i++){
+      if(index[i] >= shape_[i]){
+        throw std::out_of_range(
+          "index out of range at dim " + std::to_string(i)
+        );
+      }
+      if(index[i] < 0)  throw std::out_of_range("index must be non-negative");;
+      n += index[i] * stride_[i];
+    }
+
+    return MatrixView(shape_.at(shape_.size() - 2),shape_.at(shape_.size() - 1),const_cast<float*>(&data()[n]));
+  }
+
   /*//指定した範囲を
   MatrixView submatrix_view(...){
     return MatrixView(1,1,data());
   }*/
 
+  //範囲内で自由
   MatrixView unsafe_matrix_view(int64_t rows,int64_t cols,int64_t row_stride,int64_t col_stride,size_t index){
     if(index < 0 || index > numel()) throw std::out_of_range("Tensor::unsafe_matrix_view index out of range");
 
@@ -90,6 +126,28 @@ public:
     }
 
     return MatrixView(rows,cols,row_stride,col_stride,&data_[index]);
+  }
+
+  const MatrixView unsafe_matrix_view(int64_t rows,int64_t cols,int64_t row_stride,int64_t col_stride,size_t index) const{
+    if(index < 0 || index > numel()) throw std::out_of_range("Tensor::unsafe_matrix_view index out of range");
+
+    int64_t r_min = (row_stride >= 0) ? 0 : (rows - 1) * row_stride;
+    int64_t r_max = (row_stride >= 0) ? (rows - 1) * row_stride : 0;
+
+    int64_t c_min = (col_stride >= 0) ? 0 : (cols - 1) * col_stride;
+    int64_t c_max = (col_stride >= 0) ? (cols - 1) * col_stride : 0;
+
+    int64_t min_offset = r_min + c_min;
+    int64_t max_offset = r_max + c_max;
+
+    if((int64_t)index + min_offset < 0 ||
+       (int64_t)index + max_offset >= (int64_t)numel()){
+      throw std::out_of_range(
+        "Tensor::unsafe_matrix_view matrix view exceeds tensor bounds"
+      );
+    }
+
+    return MatrixView(rows,cols,row_stride,col_stride,const_cast<float*>(&data_[index]));
   }
 
   inline float& at(const std::vector<int64_t>& a){

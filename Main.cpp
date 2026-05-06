@@ -14,23 +14,24 @@
 using namespace cobalt_715::nn::tensor;
 
 int main(){
-  std::vector<float> a(100);
-  std::vector<float> b(100);
+  std::vector<float> a(30);
+  std::vector<float> b(30);
   std::vector<float> out(100);
 
-  for(int i = 0;i < 100;i++){
+  for(int i = 0;i < 30;i++){
     a[i] = i;
     b[i] = -i;
   }
 
-  Tensor t({10,10},a);
-
-  MatrixView m1 = t.unsafe_matrix_view(10,10,-10,-1,99);
-  MatrixView m2 = t.as_matrix_view({});
+  Tensor t({5,6},b);
 
   std::cout << t.to_string() << std::endl;
-  std::cout << m1.to_string() << std::endl;
-  std::cout << m2.to_string() << std::endl;
+
+  cobalt_715::nn::layer::DenseLayer layer(6,3);
+
+  std::cout << layer.to_string() << std::endl;
+
+  std::cout << layer.forward(t).to_string() << std::endl;
 
   return 0;
 }

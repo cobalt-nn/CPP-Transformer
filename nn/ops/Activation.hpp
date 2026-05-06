@@ -9,8 +9,8 @@ namespace cobalt_715::nn::ops{
 //活性化関数とその微分を保持する
 struct Activation{
   const std::string name;//活性化関数名
-  float (*act)(float);//活性化関数
-  float (*d_act)(float z,float a);//微分。様々な微分に対応するため微分に必要な情報を活性化前、活性化後の順で受け取る
+  float (*act_)(float);//活性化関数
+  float (*d_act_)(float z,float a);//微分。様々な微分に対応するため微分に必要な情報を活性化前、活性化後の順で受け取る
 };
 
 //基本的な活性化関数をまとめている
