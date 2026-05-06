@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <string>
 #include "nn/ops/vec.hpp"
-//#include "ops/vec_cpu.hpp"
 #include "ElementRef.hpp"
 
 namespace cobalt_715::nn::tensor{

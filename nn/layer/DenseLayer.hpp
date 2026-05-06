@@ -5,6 +5,7 @@
 #include "ILayer.hpp"
 #include "nlohmann/json.hpp"
 #include "nn/tensor/Tensor.hpp"
+#include "nn/tensor/MatrixView.hpp"
 #include "nn/ops/Activation.hpp"
 #include "nn/ops/Acts.hpp"
 
@@ -19,6 +20,12 @@ struct DenseLayer : ILayer{
 
   //全結合層
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
+    if(input.shape().size() > 1) throw;//行列までのみ
+    input_ptr_ = &input;
+
+    //tensor::MatrixView 
+
+    
     
     return a_;
   }

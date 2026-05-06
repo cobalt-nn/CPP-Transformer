@@ -23,18 +23,14 @@ int main(){
     b[i] = -i;
   }
 
-  Tensor ta({2,5,10},a);
+  Tensor t({10,10},a);
 
-  MatrixView m1(5,3,10,1,&ta.data()[0]);
-  MatrixView m2(3,5,10,1,&ta.data()[5]);
+  MatrixView m1 = t.unsafe_matrix_view(10,10,-10,-1,99);
+  MatrixView m2 = t.as_matrix_view({});
 
-  MatrixView m3(5,5,10,1,&ta.data()[50]);
-
-  MatrixView::matmul(m1,m2,m3);
-
-  std::cout << m1.to_string() << "\n" << m2.to_string() << "\n" << m3.to_string() << std::endl;
-
-  std::cout << m3.t().to_string() << "\n" << ta.to_string() << std::endl;
+  std::cout << t.to_string() << std::endl;
+  std::cout << m1.to_string() << std::endl;
+  std::cout << m2.to_string() << std::endl;
 
   return 0;
 }
