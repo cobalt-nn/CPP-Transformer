@@ -86,7 +86,7 @@ public:
   //行列積
   static void matmul(const MatrixView &a,const MatrixView &b,MatrixView &out){
     #ifndef NDEBUG
-      if(a.cols() != b.rows()) throw std::invalid_argument("Matrix::dot dimension mismatch");
+      if(a.cols() != b.rows()) throw std::invalid_argument("Matrix::matmul dimension mismatch");
       if(out.rows() != a.rows() || out.cols() != b.cols()) throw std::invalid_argument("Matrix::matmul dimension mismatch: out.rows() != a.rows() or out.cols() != b.cols()");
     #endif
 

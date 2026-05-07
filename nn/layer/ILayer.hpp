@@ -21,7 +21,7 @@ struct ILayer{
 
   //更新
   //学習率、バッチサイズを受け取る
-  virtual void step(double lr,int batch_size=64) = 0;
+  virtual void step(float lr,int batch_size=64) = 0;
 
   //勾配をリセットする
   virtual void zero_grad() = 0;
