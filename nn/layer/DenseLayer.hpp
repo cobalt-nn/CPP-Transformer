@@ -74,7 +74,7 @@ struct DenseLayer : ILayer{
 
     if(grad_.shape() != input_ptr_->shape()) grad_ = tensor::Tensor(input_ptr_->shape());
 
-    const tensor::MatrixView input_view = input_ptr_->as_matrix_view({});
+    const tensor::ConstMatrixView input_view = input_ptr_->as_matrix_view({});
     const tensor::MatrixView W_view = W_.as_matrix_view({});
     const tensor::MatrixView delta_view = delta_.as_matrix_view({});
 

@@ -4,20 +4,14 @@
 #include <cstdint>
 #include <string>
 #include "nn/ops/vec.hpp"
-#include "ElementRef.hpp"
+#include "ConstMatrixView.hpp"
+#include "Layout.hpp"
 
 namespace cobalt_715::nn::tensor{
 
 //Tensorなどから一部を行列として借用する
 class MatrixView{
 public:
-  enum class LayoutType{
-    CONTIGUOUS,//完全連続
-    ROW_CONTIGUOUS,//行連続
-    STRIDED_SAFE,//strided_safe
-    OVERLAPPED//書き込み不可能
-  };
-
   constexpr MatrixView(int64_t rows,int64_t cols,float *data) :
     rows_(rows),
     cols_(cols),
@@ -38,15 +32,16 @@ public:
     update_layout();
   }
 
-  inline detail::ElementRef at(const int64_t row,const int64_t col){
-    #ifndef NDEBUG
-      return detail::ElementRef(&data_[row * row_stride_ + col * col_stride_],type_ != LayoutType::OVERLAPPED);
-    #else
-      return detail::ElementRef(&data_[row * row_stride_ + col * col_stride_]);
-    #endif
+  //const問題を解決するためfloat*ではなくconst float*をメンバに持つものに変換する
+  constexpr operator ConstMatrixView() const{
+    return ConstMatrixView(rows_,cols_,row_stride_,col_stride_,data_);
   }
 
-  inline const float at(const int64_t row,const int64_t col) const{
+  inline float& at(const int64_t row,const int64_t col){
+    return data_[row * row_stride_ + col * col_stride_];
+  }
+
+  inline const float& at(const int64_t row,const int64_t col) const{
     return data_[row * row_stride_ + col * col_stride_];
   }
 
@@ -66,12 +61,12 @@ public:
     return col_stride_;
   }
 
-  inline const LayoutType layout() const noexcept{
+  inline const Layout layout() const noexcept{
     return type_;
   }
 
   inline const bool is_writable() const noexcept{
-    return type_ != LayoutType::OVERLAPPED;
+    return type_ != Layout::OVERLAPPED;
   }
 
   inline int64_t numel() const noexcept{
@@ -84,7 +79,7 @@ public:
   inline const float* base_ptr() const noexcept{return data_;}
 
   //行列積
-  static void matmul(const MatrixView &a,const MatrixView &b,MatrixView &out){
+  static void matmul(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView &out){
     #ifndef NDEBUG
       if(a.cols() != b.rows()) throw std::invalid_argument("Matrix::matmul dimension mismatch");
       if(out.rows() != a.rows() || out.cols() != b.cols()) throw std::invalid_argument("Matrix::matmul dimension mismatch: out.rows() != a.rows() or out.cols() != b.cols()");
@@ -106,15 +101,15 @@ public:
   }
 
   //out(i,j) = a(i,j) + b(i,j)
-  inline static void add(const MatrixView &a,const MatrixView &b,MatrixView &out){
+  inline static void add(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView &out){
     #ifndef NDEBUG
       if(a.rows() != b.rows() || a.cols() != b.cols() || a.rows() != out.rows() || a.cols() != out.cols()) throw std::invalid_argument("MatrixView::add dimension mismatch");
     #endif
 
-    if(a.layout() == LayoutType::CONTIGUOUS && b.layout() == LayoutType::CONTIGUOUS && out.layout() == LayoutType::CONTIGUOUS){
+    if(a.layout() == Layout::CONTIGUOUS && b.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
       ops::vec::add(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
 
-    }else if(a.layout() == LayoutType::ROW_CONTIGUOUS && b.layout() == LayoutType::ROW_CONTIGUOUS && out.layout() == LayoutType::ROW_CONTIGUOUS){
+    }else if(a.layout() == Layout::ROW_CONTIGUOUS && b.layout() == Layout::ROW_CONTIGUOUS && out.layout() == Layout::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
       const float *bd = b.base_ptr();
       float *od = out.base_ptr();
@@ -165,15 +160,15 @@ public:
   }
 
   //out(i,j) = a(i,j) - b(i,j)
-  inline static void sub(const MatrixView &a,const MatrixView &b,MatrixView &out){
+  inline static void sub(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView &out){
     #ifndef NDEBUG
       if(a.rows() != b.rows() || a.cols() != b.cols() || a.rows() != out.rows() || a.cols() != out.cols()) throw std::invalid_argument("MatrixView::sub dimension mismatch");
     #endif
 
-    if(a.layout() == LayoutType::CONTIGUOUS && b.layout() == LayoutType::CONTIGUOUS && out.layout() == LayoutType::CONTIGUOUS){
+    if(a.layout() == Layout::CONTIGUOUS && b.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
       ops::vec::sub(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
 
-    }else if(a.layout() == LayoutType::ROW_CONTIGUOUS && b.layout() == LayoutType::ROW_CONTIGUOUS && out.layout() == LayoutType::ROW_CONTIGUOUS){
+    }else if(a.layout() == Layout::ROW_CONTIGUOUS && b.layout() == Layout::ROW_CONTIGUOUS && out.layout() == Layout::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
       const float *bd = b.base_ptr();
       float *od = out.base_ptr();
@@ -224,15 +219,15 @@ public:
   }
 
   //out(i,j) = a(i,j) * b(i,j)
-  inline static void hadamard(const MatrixView &a,const MatrixView &b,MatrixView &out){
+  inline static void hadamard(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView &out){
     #ifndef NDEBUG
       if(a.rows() != b.rows() || a.cols() != b.cols() || a.rows() != out.rows() || a.cols() != out.cols()) throw std::invalid_argument("MatrixView::hadamard dimension mismatch");
     #endif
 
-    if(a.layout() == LayoutType::CONTIGUOUS && b.layout() == LayoutType::CONTIGUOUS && out.layout() == LayoutType::CONTIGUOUS){
+    if(a.layout() == Layout::CONTIGUOUS && b.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
       ops::vec::mul(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
 
-    }else if(a.layout() == LayoutType::ROW_CONTIGUOUS && b.layout() == LayoutType::ROW_CONTIGUOUS && out.layout() == LayoutType::ROW_CONTIGUOUS){
+    }else if(a.layout() == Layout::ROW_CONTIGUOUS && b.layout() == Layout::ROW_CONTIGUOUS && out.layout() == Layout::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
       const float *bd = b.base_ptr();
       float *od = out.base_ptr();
@@ -283,15 +278,15 @@ public:
   }
 
   //out(i,j) = a(i,j) * c
-  inline static void scale(const MatrixView &a,const float c,MatrixView &out){
+  inline static void scale(const ConstMatrixView &a,const float c,MatrixView &out){
     #ifndef NDEBUG
       if(a.rows() != out.rows() || a.cols() != out.cols()) throw std::invalid_argument("MatrixView::scale dimension mismatch");
     #endif
 
-    if(a.layout() == LayoutType::CONTIGUOUS && out.layout() == LayoutType::CONTIGUOUS){
+    if(a.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
       ops::vec::scale(a.base_ptr(),c,out.base_ptr(),a.numel());
 
-    }else if(a.layout() == LayoutType::ROW_CONTIGUOUS && out.layout() == LayoutType::ROW_CONTIGUOUS){
+    }else if(a.layout() == Layout::ROW_CONTIGUOUS && out.layout() == Layout::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
       float *od = out.base_ptr();
 
@@ -363,26 +358,30 @@ private:
   int64_t row_stride_;//row_stride
   int64_t col_stride_;//col_stride
   float *data_;//data
-  LayoutType type_;
+  Layout type_;
 
   constexpr void update_layout() noexcept{
     if(row_stride_ == 0){
-      type_ = LayoutType::OVERLAPPED;
+      type_ = Layout::OVERLAPPED;
       return;
     }
     if(row_stride_ == cols_ && col_stride_ == 1 || cols_ == 0){
-      type_ = LayoutType::CONTIGUOUS;
+      type_ = Layout::CONTIGUOUS;
       return;
     }
     if(col_stride_ == 1){
-      type_ = LayoutType::ROW_CONTIGUOUS;
+      type_ = Layout::ROW_CONTIGUOUS;
+      return;
+    }
+    if(row_stride_ == 1){
+      type_ = Layout::COL_CONTIGUOUS;
       return;
     }
     if(std::abs(row_stride_) >= cols_ * std::abs(col_stride_) && col_stride_ != 0){
-      type_ = LayoutType::STRIDED_SAFE;
+      type_ = Layout::STRIDED_SAFE;
       return;
     }
-    type_ = LayoutType::OVERLAPPED;
+    type_ = Layout::OVERLAPPED;
   }
 };
 

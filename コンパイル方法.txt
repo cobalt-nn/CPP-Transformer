@@ -1,0 +1,2 @@
+g++ -std=c++20 -I. -Iexternal *.cpp data/*.cpp -o main
+g++ -std=c++20 -Ofast -DNDEBUG -march=native -I. -Iexternal *.cpp data/*.cpp -o main
