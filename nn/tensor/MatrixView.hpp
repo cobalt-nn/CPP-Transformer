@@ -1,6 +1,6 @@
 #pragma once
 
-//#include <iostream>
+#include <iostream>
 #include <cstdint>
 #include <string>
 #include "nn/ops/vec.hpp"
@@ -79,7 +79,7 @@ public:
   inline const float* base_ptr() const noexcept{return data_;}
 
   //行列積
-  static void matmul(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView &out){
+  static void matmul(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView out){
     #ifndef NDEBUG
       if(a.cols() != b.rows()) throw std::invalid_argument("Matrix::matmul dimension mismatch");
       if(out.rows() != a.rows() || out.cols() != b.cols()) throw std::invalid_argument("Matrix::matmul dimension mismatch: out.rows() != a.rows() or out.cols() != b.cols()");
@@ -101,14 +101,15 @@ public:
   }
 
   //out(i,j) = a(i,j) + b(i,j)
-  inline static void add(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView &out){
+  inline static void add(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView out){
     #ifndef NDEBUG
       if(a.rows() != b.rows() || a.cols() != b.cols() || a.rows() != out.rows() || a.cols() != out.cols()) throw std::invalid_argument("MatrixView::add dimension mismatch");
     #endif
 
-    if(a.layout() == Layout::CONTIGUOUS && b.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
+    if(!out.is_writable()){
+      throw std::logic_error("MatrixView::add Write to overlapped");
+    }else if(a.layout() == Layout::CONTIGUOUS && b.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
       ops::vec::add(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
-
     }else if(a.layout() == Layout::ROW_CONTIGUOUS && b.layout() == Layout::ROW_CONTIGUOUS && out.layout() == Layout::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
       const float *bd = b.base_ptr();
@@ -120,6 +121,22 @@ public:
 
       for(int64_t i = 0;i < a.rows();i++){
         ops::vec::add(ad,bd,od,cols);
+
+        ad += stride;
+        bd += stride;
+        od += stride;
+      }
+    }else if(a.layout() == Layout::COL_CONTIGUOUS && b.layout() == Layout::COL_CONTIGUOUS && out.layout() == Layout::COL_CONTIGUOUS){
+      const float *ad = a.base_ptr();
+      const float *bd = b.base_ptr();
+      float *od = out.base_ptr();
+
+      const int64_t stride = a.col_stride();
+
+      const int64_t rows = a.rows();
+
+      for(int64_t i = 0;i < a.cols();i++){
+        ops::vec::add(ad,bd,od,rows);
 
         ad += stride;
         bd += stride;
@@ -156,18 +173,19 @@ public:
         bd += brs;
         od += ors;
       }
-    }else throw std::logic_error("MatrixView::add Write to overlapped");
+    }else throw std::logic_error("MatrixView::add that pattern is undef");
   }
 
   //out(i,j) = a(i,j) - b(i,j)
-  inline static void sub(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView &out){
+  inline static void sub(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView out){
     #ifndef NDEBUG
       if(a.rows() != b.rows() || a.cols() != b.cols() || a.rows() != out.rows() || a.cols() != out.cols()) throw std::invalid_argument("MatrixView::sub dimension mismatch");
     #endif
 
-    if(a.layout() == Layout::CONTIGUOUS && b.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
+    if(!out.is_writable()){
+      throw std::logic_error("MatrixView::sub Write to overlapped");
+    }else if(a.layout() == Layout::CONTIGUOUS && b.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
       ops::vec::sub(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
-
     }else if(a.layout() == Layout::ROW_CONTIGUOUS && b.layout() == Layout::ROW_CONTIGUOUS && out.layout() == Layout::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
       const float *bd = b.base_ptr();
@@ -179,6 +197,22 @@ public:
 
       for(int64_t i = 0;i < a.rows();i++){
         ops::vec::sub(ad,bd,od,cols);
+
+        ad += stride;
+        bd += stride;
+        od += stride;
+      }
+    }else if(a.layout() == Layout::COL_CONTIGUOUS && b.layout() == Layout::COL_CONTIGUOUS && out.layout() == Layout::COL_CONTIGUOUS){
+      const float *ad = a.base_ptr();
+      const float *bd = b.base_ptr();
+      float *od = out.base_ptr();
+
+      const int64_t stride = a.col_stride();
+
+      const int64_t rows = a.rows();
+
+      for(int64_t i = 0;i < a.cols();i++){
+        ops::vec::sub(ad,bd,od,rows);
 
         ad += stride;
         bd += stride;
@@ -215,18 +249,19 @@ public:
         bd += brs;
         od += ors;
       }
-    }else throw std::logic_error("MatrixView::sub Write to overlapped");
+    }else throw std::logic_error("MatrixView::sub that pattern is undef");
   }
 
   //out(i,j) = a(i,j) * b(i,j)
-  inline static void hadamard(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView &out){
+  inline static void hadamard(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView out){
     #ifndef NDEBUG
       if(a.rows() != b.rows() || a.cols() != b.cols() || a.rows() != out.rows() || a.cols() != out.cols()) throw std::invalid_argument("MatrixView::hadamard dimension mismatch");
     #endif
 
-    if(a.layout() == Layout::CONTIGUOUS && b.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
+    if(!out.is_writable()){
+      throw std::logic_error("MatrixView::hadamard Write to overlapped");
+    }else if(a.layout() == Layout::CONTIGUOUS && b.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
       ops::vec::mul(a.base_ptr(),b.base_ptr(),out.base_ptr(),a.numel());
-
     }else if(a.layout() == Layout::ROW_CONTIGUOUS && b.layout() == Layout::ROW_CONTIGUOUS && out.layout() == Layout::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
       const float *bd = b.base_ptr();
@@ -238,6 +273,22 @@ public:
 
       for(int64_t i = 0;i < a.rows();i++){
         ops::vec::mul(ad,bd,od,cols);
+
+        ad += stride;
+        bd += stride;
+        od += stride;
+      }
+    }else if(a.layout() == Layout::COL_CONTIGUOUS && b.layout() == Layout::COL_CONTIGUOUS && out.layout() == Layout::COL_CONTIGUOUS){
+      const float *ad = a.base_ptr();
+      const float *bd = b.base_ptr();
+      float *od = out.base_ptr();
+
+      const int64_t stride = a.col_stride();
+
+      const int64_t rows = a.rows();
+
+      for(int64_t i = 0;i < a.cols();i++){
+        ops::vec::mul(ad,bd,od,rows);
 
         ad += stride;
         bd += stride;
@@ -274,18 +325,19 @@ public:
         bd += brs;
         od += ors;
       }
-    }else throw std::logic_error("MatrixView::hadamard Write to overlapped");
+    }else throw std::logic_error("MatrixView::hadamard that pattern is undef");
   }
 
   //out(i,j) = a(i,j) * c
-  inline static void scale(const ConstMatrixView &a,const float c,MatrixView &out){
+  inline static void scale(const ConstMatrixView &a,const float c,MatrixView out){
     #ifndef NDEBUG
       if(a.rows() != out.rows() || a.cols() != out.cols()) throw std::invalid_argument("MatrixView::scale dimension mismatch");
     #endif
 
-    if(a.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
+    if(!out.is_writable()){
+      throw std::logic_error("MatrixView::add Write to overlapped");
+    }else if(a.layout() == Layout::CONTIGUOUS && out.layout() == Layout::CONTIGUOUS){
       ops::vec::scale(a.base_ptr(),c,out.base_ptr(),a.numel());
-
     }else if(a.layout() == Layout::ROW_CONTIGUOUS && out.layout() == Layout::ROW_CONTIGUOUS){
       const float *ad = a.base_ptr();
       float *od = out.base_ptr();
@@ -296,6 +348,20 @@ public:
 
       for(int64_t i = 0;i < a.rows();i++){
         ops::vec::scale(ad,c,od,cols);
+
+        ad += stride;
+        od += stride;
+      }
+    }else if(a.layout() == Layout::COL_CONTIGUOUS && out.layout() == Layout::COL_CONTIGUOUS){
+      const float *ad = a.base_ptr();
+      float *od = out.base_ptr();
+
+      const int64_t stride = a.col_stride();
+
+      const int64_t rows = a.rows();
+
+      for(int64_t i = 0;i < a.cols();i++){
+        ops::vec::scale(ad,c,od,rows);
 
         ad += stride;
         od += stride;
@@ -324,7 +390,7 @@ public:
         ad += ars;
         od += ors;
       }
-    }else throw std::logic_error("MatrixView::scale Write to overlapped");
+    }else throw std::logic_error("MatrixView::scale that pattern is undef");
   }
 
   //転置viewを返す

@@ -17,7 +17,7 @@
 
 using namespace cobalt_715::nn;
 
-/*int main(){
+int main(){
   std::vector<float> v(588);
 
   for(int i = 0;i < v.size();i++){
@@ -36,7 +36,28 @@ using namespace cobalt_715::nn;
 
   tensor::MatrixView::matmul(in1.t(),in2,out2);
 
-  std::cout << out2.to_string() << std::endl;
+  //std::cout << out2.to_string() << std::endl;
+
+  std::vector<float> a(100);
+  std::vector<float> b(100);
+  std::vector<float> c(100);
+
+  for(int i = 0;i < 100;i++){
+    a[i] = i;
+    b[i] = -i;
+  }
+
+  tensor::Tensor t1({10,10},a);
+  tensor::Tensor t2({10,10},b);
+  tensor::Tensor t3({10,10},c);
+
+  tensor::MatrixView m1 = t1.as_matrix_view({});
+  tensor::MatrixView m2 = t2.as_matrix_view({});
+  tensor::MatrixView m3 = t3.as_matrix_view({});
+
+  tensor::MatrixView::add(m1.t(),m2.t(),m3.t());
+
+  std::cout << t1.to_string() << "\n" << t2.to_string() << "\n" << t3.to_string() << std::endl;
 
 // 12 * 12
 //{
@@ -55,9 +76,9 @@ using namespace cobalt_715::nn;
 //}
 
   return 0;
-}*/
+}
 
-std::vector<float> makeTenVector(int i){
+/*std::vector<float> makeTenVector(int i){
   std::vector<float> v(10);
   v.at(i) = 1;
   return v;
@@ -166,4 +187,4 @@ int main(){
   std::cout << correct / static_cast<float>(total * batch_size) << std::endl;
 
   return 0;
-}
+}*/

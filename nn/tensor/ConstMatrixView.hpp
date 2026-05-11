@@ -53,9 +53,9 @@ public:
     return type_;
   }
 
-  inline const bool is_writable() const noexcept{
+  /*inline const bool is_writable() const noexcept{
     return type_ != Layout::OVERLAPPED;
-  }
+  }*/
 
   inline int64_t numel() const noexcept{
     return rows_ * cols_;
