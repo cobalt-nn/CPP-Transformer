@@ -3,9 +3,10 @@
 #include <iostream>
 #include <cstdint>
 #include <string>
-#include "nn/ops/vec.hpp"
 #include "ConstMatrixView.hpp"
 #include "Layout.hpp"
+#include "nn/ops/vec.hpp"
+#include "nn/ops/GEMM.hpp"
 
 namespace cobalt_715::nn::tensor{
 
