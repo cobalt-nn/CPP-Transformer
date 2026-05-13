@@ -6,6 +6,7 @@
 #include "ConstMatrixView.hpp"
 #include "Layout.hpp"
 #include "nn/ops/vec.hpp"
+#include "nn/ops//vec_cpu.hpp"
 #include "nn/ops/GEMM.hpp"
 
 namespace cobalt_715::nn::tensor{
@@ -88,17 +89,7 @@ public:
 
     if(!out.is_writable()) throw std::logic_error("MatrixView::matmul Write to overlapped");
 
-    for(int64_t i = 0;i < out.rows();i++){
-      for(int64_t k = 0;k < a.cols();k++){
-        for(int64_t j = 0;j < out.cols();j++){
-          if(k == 0){
-            out.at(i,j) = a.at(i,k) * b.at(k,j);
-          }else{
-            out.at(i,j) += a.at(i,k) * b.at(k,j);
-          }
-        }
-      }
-    }
+    ops::gemm(a,b,out);
   }
 
   //out(i,j) = a(i,j) + b(i,j)

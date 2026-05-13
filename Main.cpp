@@ -17,7 +17,7 @@
 
 using namespace cobalt_715::nn;
 
-int main(){
+/*int main(){
   std::vector<float> v(588);
 
   for(int i = 0;i < v.size();i++){
@@ -55,9 +55,9 @@ int main(){
 //}
 
   return 0;
-}
+}*/
 
-/*std::vector<float> makeTenVector(int i){
+std::vector<float> makeTenVector(int i){
   std::vector<float> v(10);
   v.at(i) = 1;
   return v;
@@ -166,4 +166,4 @@ int main(){
   std::cout << correct / static_cast<float>(total * batch_size) << std::endl;
 
   return 0;
-}*/
+}

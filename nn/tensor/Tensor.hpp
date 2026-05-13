@@ -8,6 +8,7 @@
 #include "MatrixView.hpp"
 #include "nn/backend/backend.hpp"
 #include "nn/ops/vec.hpp"
+#include "nn/ops/vec_cpu.hpp"
 
 namespace cobalt_715::nn::tensor{
 
