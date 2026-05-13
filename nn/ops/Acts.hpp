@@ -3,7 +3,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <string>
-#include "Activation.h"
+#include "Activation.hpp"
 
 namespace cobalt_715::nn::ops{
 
