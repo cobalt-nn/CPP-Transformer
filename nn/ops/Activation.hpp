@@ -19,7 +19,7 @@ namespace activations{
 inline const Activation Sigmoid{
   "Sigmoid",
   [](float x){
-    return 1.0f / (1.0f + std::expf(-x));
+    return 1.0f / (1.0f + std::exp(-x));
   },
   [](float z,float a){
     return a * (1.0f - a);
@@ -29,7 +29,7 @@ inline const Activation Sigmoid{
 inline const Activation tanh{
   "tanh",
   [](float x){
-    return std::tanhf(x);
+    return std::tanh(x);
   },
   [](float z,float a){
     return 1.0f - a * a;
