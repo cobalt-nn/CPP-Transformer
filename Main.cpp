@@ -13,6 +13,7 @@
 #include "nn/layer/RMSNorm.hpp"
 #include "nn/ops/Activation.hpp"
 #include "nn/ops/Acts.hpp"
+#include "nn/ops/GEMM.hpp"
 
 #include "data/MNISTLoader.hpp"
 
@@ -65,6 +66,26 @@ std::vector<float> makeTenVector(int i){
 }
 
 int main(){
+  /*std::vector<float> v(4*4);
+
+  for(int i = 0;i < v.size();i++){
+    v[i] = i;
+  }
+
+  tensor::MatrixView matrix(4,4,v.data());
+
+  std::cout << matrix.to_string() << std::endl;
+
+  std::vector<float> v2(4*4);
+
+  ops::set_pack_interleave<2>(matrix,0,0,4,4,v2.data());
+
+  tensor::MatrixView matrix2(2,8,v2.data());
+
+  std::cout << matrix2.to_string() << std::endl;
+
+  return 0;*/
+
   const size_t MNIST_size = 60000;
 
   const size_t batch_size = 32;
