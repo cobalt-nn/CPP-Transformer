@@ -92,6 +92,17 @@ public:
     ops::gemm(a,b,out);
   }
 
+  static void matmul_add(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView out){
+    #ifndef NDEBUG
+      if(a.cols() != b.rows()) throw std::invalid_argument("Matrix::matmul dimension mismatch");
+      if(out.rows() != a.rows() || out.cols() != b.cols()) throw std::invalid_argument("Matrix::matmul dimension mismatch: out.rows() != a.rows() or out.cols() != b.cols()");
+    #endif
+
+    if(!out.is_writable()) throw std::logic_error("MatrixView::matmul_add Write to overlapped");
+
+    ops::gemm_add(a,b,out);
+  }
+
   //out(i,j) = a(i,j) + b(i,j)
   inline static void add(const ConstMatrixView &a,const ConstMatrixView &b,MatrixView out){
     #ifndef NDEBUG

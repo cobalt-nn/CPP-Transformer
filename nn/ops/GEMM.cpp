@@ -393,14 +393,19 @@ void gemm_impl(const float alpha,const tensor::ConstMatrixView &a,const tensor::
 
   for(int64_t jj = 0;jj < j_end;jj += JB){//jj + JB <= ocols
     for(int64_t kk = 0;kk < k_end;kk += KB){//kk + KB <= acols
-      set_pack_interleave<8>(bt,jj,kk,JB,KB,bt_pack);
+      //set_pack_interleave<8>(bt,jj,kk,JB,KB,bt_pack);
+      set_pack(bt,jj,kk,JB,KB,bt_pack);
 
       for(int64_t ii = 0;ii + IB <= orows;ii += IB){
-        set_pack_interleave<8>(a,ii,kk,IB,KB,a_pack);
+        //set_pack_interleave<8>(a,ii,kk,IB,KB,a_pack);
+        set_pack(a,ii,kk,IB,KB,a_pack);
+
         if(kk == 0){
-          kernel_avx2<true>(a_pack,bt_pack,alpha,beta,out,IB,JB,KB,ii,jj);
+          //kernel_avx2<true>(a_pack,bt_pack,alpha,beta,out,IB,JB,KB,ii,jj);
+          kernel_reg_4_4<true>(a_pack,bt_pack,alpha,beta,out,IB,JB,KB,ii,jj);
         }else{
-          kernel_avx2<false>(a_pack,bt_pack,alpha,beta,out,IB,JB,KB,ii,jj);
+          //kernel_avx2<false>(a_pack,bt_pack,alpha,beta,out,IB,JB,KB,ii,jj);
+          kernel_reg_4_4<false>(a_pack,bt_pack,alpha,beta,out,IB,JB,KB,ii,jj);
         }
       }
     }
@@ -412,11 +417,15 @@ void gemm_impl(const float alpha,const tensor::ConstMatrixView &a,const tensor::
 
   //iの残り
   for(int64_t i = (orows / IB) * IB;i < out.rows();i++){
+    const int64_t air = i * a_row_stride;
+
     for(int64_t j = 0;j < ocols;j++){
       float *odij = &out.at(i,j);
+      const int64_t btjr = j * bt_row_stride;
       float sum = 0;
+
       for(int64_t k = 0;k < acols;k++){
-        sum += a.at(i,k) * bt.at(j,k);
+        sum += ad[air + k * a_col_stride] * btd[btjr + k * bt_col_stride];
       }
       *odij = *odij * beta + sum * alpha;
     }
@@ -424,11 +433,15 @@ void gemm_impl(const float alpha,const tensor::ConstMatrixView &a,const tensor::
 
   //jの残り
   for(int64_t i = 0;i < (orows / IB) * IB;i++){
+    const int64_t air = i * a_row_stride;
+
     for(int64_t j = (ocols / JB) * JB;j < out.cols();j++){
       float *odij = &out.at(i,j);
+      const int64_t btjr = j * bt_row_stride;
       float sum = 0;
+
       for(int64_t k = 0;k < acols;k++){
-        sum += a.at(i,k) * bt.at(j,k);
+        sum += ad[air + k * a_col_stride] * btd[btjr + k * bt_col_stride];
       }
       *odij = *odij * beta + sum * alpha;
     }
@@ -436,11 +449,15 @@ void gemm_impl(const float alpha,const tensor::ConstMatrixView &a,const tensor::
 
   //kの残り
   for(int64_t i = 0;i < (orows / IB) * IB;i++){
+    const int64_t air = i * a_row_stride;
+
     for(int64_t j = 0;j < (ocols / JB) * JB;j++){
       float *odij = &out.at(i,j);
+      const int64_t btjr = j * bt_row_stride;
       float sum = 0;
+
       for(int64_t k = (acols / KB) * KB;k < a.cols();k++){
-        sum += a.at(i,k) * bt.at(j,k);
+        sum += ad[air + k * a_col_stride] * btd[btjr + k * bt_col_stride];
       }
       if(0 == (acols / KB) * KB){
         *odij = *odij * beta + sum * alpha;

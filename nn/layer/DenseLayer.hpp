@@ -35,7 +35,7 @@ struct DenseLayer : ILayer{
 
   //全結合層
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
-    if(input.shape().size() > 2) throw std::runtime_error("DenseLayer: input must be 1D");//行列までのみ
+    if(input.shape().size() > 2) throw std::runtime_error("DenseLayer: input must be 2D");//行列までのみ
     input_ptr_ = &input;
 
     //サイズが違うときだけ再確保
@@ -81,7 +81,7 @@ struct DenseLayer : ILayer{
     tensor::MatrixView dW_view = dW_.as_matrix_view({});
     tensor::MatrixView grad_view = grad_.as_matrix_view({});
 
-    tensor::MatrixView::matmul(input_view.t(),delta_view,dW_view);
+    tensor::MatrixView::matmul_add(input_view.t(),delta_view,dW_view);
 
     tensor::MatrixView::matmul(delta_view,W_view.t(),grad_view);
 
@@ -108,11 +108,7 @@ struct DenseLayer : ILayer{
         const int64_t index = front + col;
         dd[index] = gd[index] * act_->d_act_(zd[index],ad[index]);
 
-        if(row == 0){
-          dbd[col] = dd[index];
-        }else{
-          dbd[col] += dd[index];
-        }
+        dbd[col] += dd[index];
       }
     }
   }
@@ -131,15 +127,11 @@ struct DenseLayer : ILayer{
   void zero_grad(){
     float *dWd = dW_.data();
 
-    for(int64_t i = 0;i < dW_.numel();i++){
-      dWd[i] = 0;
-    }
+    std::fill(dWd,dWd + dW_.numel(),0.0f);
 
     float *dbd = db_.data();
 
-    for(int64_t i = 0;i < db_.numel();i++){
-      dbd[i] = 0;
-    }
+    std::fill(dbd,dbd + db_.numel(),0.0f);
   }
 
   //層の種類を返す。適切にオーバーライドすること

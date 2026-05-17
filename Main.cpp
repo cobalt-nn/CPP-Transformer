@@ -11,9 +11,12 @@
 #include "nn/layer/ILayer.hpp"
 #include "nn/layer/DenseLayer.hpp"
 #include "nn/layer/RMSNorm.hpp"
+#include "nn/layer/Attention.hpp"
 #include "nn/ops/Activation.hpp"
 #include "nn/ops/Acts.hpp"
 #include "nn/ops/GEMM.hpp"
+
+#include "nn/Model.hpp"
 
 #include "data/MNISTLoader.hpp"
 
@@ -133,8 +136,8 @@ int main(){
   auto start = std::chrono::high_resolution_clock::now();
 
   for(size_t i = 0;i < input.size();i++){
-    const tensor::Tensor &output = l3.forward(l2.forward(l1.forward(norm.forward(input[i]))));
-    norm.backward(l1.backward(l2.backward(l3.backward(output - target[i]))));
+    const tensor::Tensor &output = l3.forward(l2.forward(l1.forward((input[i]))));
+    (l1.backward(l2.backward(l3.backward(output - target[i]))));
 
     //std::cout << output.to_string() << std::endl;
 
@@ -160,7 +163,7 @@ int main(){
   size_t total = 5;
 
   for(size_t i = 0;i < total;i++){
-    const tensor::Tensor output = l3.forward(l2.forward(l1.forward(norm.forward(input[i]))));
+    const tensor::Tensor output = l3.forward(l2.forward(l1.forward((input[i]))));
 
     //std::cout << output.to_string() << std::endl;
 

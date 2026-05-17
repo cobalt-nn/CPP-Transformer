@@ -87,12 +87,28 @@ inline void set_pack_interleave(const tensor::ConstMatrixView &m,int64_t row,int
 #if defined(__AVX2__) && defined(__FMA__)
 
 inline float m256_sum(__m256 v){
+  __m128 vlow  = _mm256_castps256_ps128(v);
+  __m128 vhigh = _mm256_extractf128_ps(v, 1);
+
+  vlow = _mm_add_ps(vlow, vhigh);
+
+  __m128 shuf = _mm_movehdup_ps(vlow);
+  __m128 sums = _mm_add_ps(vlow, shuf);
+
+  shuf = _mm_movehl_ps(shuf, sums);
+
+  sums = _mm_add_ss(sums, shuf);
+
+  return _mm_cvtss_f32(sums);
+}
+
+/*inline float m256_sum(__m256 v){
   alignas(32) float n[8];
 
   _mm256_store_ps(n,v);
 
   return n[0] + n[1] + n[2] + n[3] + n[4] + n[5] + n[6] + n[7];
-}
+}*/
 
 #endif
 
