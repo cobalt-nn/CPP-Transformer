@@ -1,5 +1,6 @@
 #pragma once
 
+#include <immintrin.h>
 #include <cstdint>
 
 //ブロックサイズは32の倍数固定
@@ -20,6 +21,13 @@ void kernel(const float*__restrict a_pack,const float*__restrict bt_pack,const f
 //レジスタタイル
 template<bool FirstK>
 void kernel_reg_4_4(const float*__restrict a_pack,const float*__restrict bt_pack,const float alpha,const float beta,tensor::MatrixView &out,const int64_t IB,const int64_t JB,const int64_t KB,const int64_t ii,const int64_t jj);
+
+#if defined(__AVX2__) && defined(__FMA__)
+
+template<bool FirstK>
+void kernel_avx2(const float*__restrict a_pack,const float*__restrict bt_pack,const float alpha,const float beta,tensor::MatrixView &out,const int64_t IB,const int64_t JB,const int64_t KB,const int64_t ii,const int64_t jj);
+
+#endif
 
 //out = alpha * ab + beta * out
 void gemm_impl(const float alpha,const tensor::ConstMatrixView &a,const tensor::ConstMatrixView &b,const float beta,tensor::MatrixView &out);
@@ -68,12 +76,24 @@ inline void set_pack_interleave(const tensor::ConstMatrixView &m,int64_t row,int
 
     for(int64_t j = 0;j < j_size;j++){
       //(j / num) * num * i_sizeはpackの行の最初を示す
-      pack[(j / num) * num * i_size + (j % num) + i * num] = *mdi;
+      pack[((j / num) * i_size  + i) * num + (j % num)] = *mdi;
       mdi += cs;
     }
 
     md += rs;
   }
 }
+
+#if defined(__AVX2__) && defined(__FMA__)
+
+inline float m256_sum(__m256 v){
+  alignas(32) float n[8];
+
+  _mm256_store_ps(n,v);
+
+  return n[0] + n[1] + n[2] + n[3] + n[4] + n[5] + n[6] + n[7];
+}
+
+#endif
 
 }//namespace cobalt_715::nn::ops
