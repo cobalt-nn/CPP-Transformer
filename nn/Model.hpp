@@ -6,7 +6,7 @@
 #include "nlohmann/json.hpp"
 #include "tensor/Tensor.hpp"
 #include "layer/ILayer.hpp"
-#include "layer/DenseLayer.hpp"
+#include "layer/Dense.hpp"
 #include "layer/RMSNorm.hpp"
 #include "layer/Attention.hpp"
 #include "ops/Activation.hpp"
@@ -16,9 +16,15 @@ namespace cobalt_715::nn{
 
 struct Model : layer::ILayer{
 private:
-  std::vector<std::unique_ptr<ILayer>> layers_;
+  std::vector<std::unique_ptr<layer::ILayer>> layers_;
 
 public:
+  Model& add(std::unique_ptr<ILayer> l){
+    layers_.push_back(std::move(l));
+
+    return *this;
+  }
+
   //順伝播
   //前層の出力を受け取る
   //training=falseなら学習用にデータを保存しなくてもいい

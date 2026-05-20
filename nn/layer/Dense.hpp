@@ -14,8 +14,9 @@
 
 namespace cobalt_715::nn::layer{
 
-struct DenseLayer : ILayer{
-  DenseLayer(int64_t in,int64_t out)
+//全結合層
+struct Dense : ILayer{
+  Dense(int64_t in,int64_t out)
     : W_({in,out}),
       b_({1,out}),
       z_({1,1}),
@@ -29,11 +30,10 @@ struct DenseLayer : ILayer{
   tensor::Tensor W_,b_;//重み、バイアス
   tensor::Tensor z_,a_;//活性化前、活性化後
   tensor::Tensor dW_,db_;//重みの微分、バイアスの微分
-  tensor::Tensor delta_,grad_;//この総出の微分、次の層に渡す勾配
+  tensor::Tensor delta_,grad_;//この層での微分、次の層に渡す勾配
 
   const ops::Activation *act_ = &ops::activations::LeakyReLU;//活性化関数とその微分。デフォルトではLeakyReLU
 
-  //全結合層
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
     if(input.shape().size() > 2) throw std::runtime_error("DenseLayer: input must be 2D");//行列までのみ
     input_ptr_ = &input;

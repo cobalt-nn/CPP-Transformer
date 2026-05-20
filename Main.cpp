@@ -9,7 +9,8 @@
 #include "nn/tensor/ConstMatrixView.hpp"
 
 #include "nn/layer/ILayer.hpp"
-#include "nn/layer/DenseLayer.hpp"
+#include "nn/layer/Dense.hpp"
+#include "nn/layer/Linear.hpp"
 #include "nn/layer/RMSNorm.hpp"
 #include "nn/layer/Attention.hpp"
 #include "nn/ops/Activation.hpp"
@@ -117,17 +118,17 @@ int main(){
     target.push_back(tensor::Tensor({static_cast<int64_t>(std::min(batch_size,MNIST_size - i)),10},labels));
   }
 
-  layer::RMSNorm norm(784);
-  layer::DenseLayer l1(784,256);
-  layer::DenseLayer l2(256,64);
-  layer::DenseLayer l3(64,10);
+  Model model;
+
+  model
+    .add(std::make_unique<layer::RMSNorm>(784))
+    .add(std::make_unique<layer::Dense>(784,256))
+    .add(std::make_unique<layer::Dense>(256,64))
+    .add(std::make_unique<layer::Dense>(64,10));
 
   std::mt19937 gen(0);
 
-  norm.random_init(gen);
-  l1.random_init(gen);
-  l2.random_init(gen);
-  l3.random_init(gen);
+  model.random_init(gen);
 
   //std::cout << input[0].to_string() << std::endl;
 
@@ -136,20 +137,11 @@ int main(){
   auto start = std::chrono::high_resolution_clock::now();
 
   for(size_t i = 0;i < input.size();i++){
-    const tensor::Tensor &output = l3.forward(l2.forward(l1.forward((input[i]))));
-    (l1.backward(l2.backward(l3.backward(output - target[i]))));
+    model.backward(model.forward(input[i]) - target[i]);
 
-    //std::cout << output.to_string() << std::endl;
+    model.step(lr,batch_size);
 
-    norm.step(lr,batch_size);
-    l1.step(lr,batch_size);
-    l2.step(lr,batch_size);
-    l3.step(lr,batch_size);
-
-    norm.zero_grad();
-    l1.zero_grad();
-    l2.zero_grad();
-    l3.zero_grad();
+    model.zero_grad();
   }
 
   auto end = std::chrono::high_resolution_clock::now();
@@ -163,7 +155,7 @@ int main(){
   size_t total = 5;
 
   for(size_t i = 0;i < total;i++){
-    const tensor::Tensor output = l3.forward(l2.forward(l1.forward((input[i]))));
+    const tensor::Tensor output = model.forward(input[i]);
 
     //std::cout << output.to_string() << std::endl;
 
