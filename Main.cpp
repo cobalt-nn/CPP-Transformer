@@ -123,7 +123,9 @@ int main(){
   model
     .add(std::make_unique<layer::RMSNorm>(784))
     .add(std::make_unique<layer::Dense>(784,256))
+    .add(std::make_unique<layer::RMSNorm>(256))
     .add(std::make_unique<layer::Dense>(256,64))
+    .add(std::make_unique<layer::RMSNorm>(64))
     .add(std::make_unique<layer::Dense>(64,10));
 
   std::mt19937 gen(0);
@@ -132,11 +134,13 @@ int main(){
 
   //std::cout << input[0].to_string() << std::endl;
 
-  const float lr = 0.01;
+  const float lr = 0.01;// / batch_size;
 
   auto start = std::chrono::high_resolution_clock::now();
 
   for(size_t i = 0;i < input.size();i++){
+    //std::cout << model.to_string() << std::endl;
+
     model.backward(model.forward(input[i]) - target[i]);
 
     model.step(lr,batch_size);

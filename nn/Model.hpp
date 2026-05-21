@@ -25,6 +25,13 @@ public:
     return *this;
   }
 
+  template<typename T,typename... Args>
+  Model& add(Args&&... args){
+    layers_.push_back(std::make_unique<T>(std::forward<Args>(args)...));
+
+    return *this;
+  }
+
   //順伝播
   //前層の出力を受け取る
   //training=falseなら学習用にデータを保存しなくてもいい
@@ -74,7 +81,13 @@ public:
 
   //文字列にしたいとき使う
   std::string to_string() const{
-    return get_type() + "::to_string() is undef";
+    std::string s;
+
+    for(auto &l:layers_){
+      s += l->to_string();
+    }
+
+    return s;
   }
 
   //json形式で保存するとき使う

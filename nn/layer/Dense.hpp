@@ -35,7 +35,7 @@ struct Dense : ILayer{
   const ops::Activation *act_ = &ops::activations::LeakyReLU;//活性化関数とその微分。デフォルトではLeakyReLU
 
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
-    if(input.shape().size() > 2) throw std::runtime_error("DenseLayer: input must be 2D");//行列までのみ
+    if(input.shape().size() > 2) throw std::runtime_error("Dense: input must be 2D");//行列までのみ
     input_ptr_ = &input;
 
     //サイズが違うときだけ再確保
