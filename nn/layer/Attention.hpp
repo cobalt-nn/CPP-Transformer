@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <random>
@@ -14,8 +15,16 @@ namespace cobalt_715::nn::layer{
 
 //self attention
 struct Attention : ILayer{
-  //Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v) :
-   // qkv_linear_
+  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v)
+    : qkv_linear_(in,num_heads * (d_qk * 2 + d_v)),
+      num_heads_(num_heads),
+      d_qk_(d_qk),
+      d_v_(d_v),
+      k_offset_(d_qk * num_heads),
+      v_offset_(2 * d_qk * num_heads),
+      scores_({1,1,1,1}),
+      weights_({1,1,1,1}),
+      output_({1,1,1}){}
 
   const tensor::Tensor *input_ptr_;
 
@@ -42,15 +51,21 @@ struct Attention : ILayer{
 
     input_ptr_ = &input;
 
-    forward_ensure_shape();
-
     qkv_ = &qkv_linear_.forward(input,training);
+
+    forward_ensure_shape();
 
     compute_scores();
 
+    std::cout << "scores" << scores_.to_string() << std::endl;
+
     compute_weights();
 
+    std::cout << "weights" << weights_.to_string() << std::endl;
+
     compute_output();
+
+    std::cout << "output" << output_.to_string() << std::endl;
 
     return output_;
   }
@@ -100,7 +115,7 @@ struct Attention : ILayer{
     float *wd = weights_.data();
 
     //exp(j - max)の合計値を求める
-    for(int64_t big_row = 0;big_row < scores_.numel() / scores_.dim(1);big_row++){
+    for(int64_t big_row = 0;big_row < scores_.numel() / scores_.dim(2);big_row++){
       for(int64_t col = 0;col < scores_.dim(2);col++){
         wd[big_row * weights_.dim(3) + col] = static_cast<float>(std::exp(sd[big_row * weights_.dim(3) + col] - mwd[big_row]) / swd[big_row]);
       }
@@ -139,27 +154,35 @@ struct Attention : ILayer{
       output_ = tensor::Tensor({input_ptr_->shape()[0],input_ptr_->shape()[1],num_heads_ * d_v_});
     }
 
-    if(sum_weights_.size() != input_ptr_->numel() / input_ptr_->dim(2) || sum_weights_.size() != max_weights_.size()){
-      sum_weights_ = std::vector<double>(input_ptr_->numel() / input_ptr_->dim(2));
-      max_weights_ = std::vector<float>(input_ptr_->numel() / input_ptr_->dim(2));
+    if(sum_weights_.size() != scores_.numel() / scores_.dim(3) || sum_weights_.size() != max_weights_.size()){
+      sum_weights_ = std::vector<double>(scores_.numel() / scores_.dim(3));
+      max_weights_ = std::vector<float>(scores_.numel() / scores_.dim(3));
     }
   }
 
-  const tensor::Tensor& backward(const tensor::Tensor& grad_output) = 0;
+  const tensor::Tensor& backward(const tensor::Tensor& grad_output) override{
+    return output_;
+  }
 
-  void step(float lr,int batch_size=64) = 0;
+  void step(float lr,int batch_size=64) override{}
 
-  void zero_grad() = 0;
+  void zero_grad() override{}
 
-  std::string get_type() const = 0;
+  std::string get_type() const override{
+    return "Attention";
+  }
 
   std::string to_string() const{
     return get_type() + "::to_string() is undef";
   }
 
-  nlohmann::ordered_json to_json() const = 0;
+  nlohmann::ordered_json to_json() const override{
+    return nlohmann::ordered_json();
+  }
 
-  void random_init(std::mt19937 &gen) = 0;
+  void random_init(std::mt19937 &gen) override{
+    qkv_linear_.random_init(gen);
+  }
 };
 
 }//namespace cobalt_715::nn::layer
