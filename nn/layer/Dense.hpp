@@ -35,16 +35,21 @@ struct Dense : ILayer{
   const ops::Activation *act_ = &ops::activations::LeakyReLU;//活性化関数とその微分。デフォルトではLeakyReLU
 
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
-    if(input.shape().size() > 2) throw std::runtime_error("Dense: input must be 2D");//行列までのみ
     input_ptr_ = &input;
 
     //サイズが違うときだけ再確保
-    if(input.shape()[0] != z_.shape()[0] || W_.shape()[1] != z_.shape()[1]) z_ = tensor::Tensor({input.shape()[0],W_.shape()[1]});
-    if(input.shape()[0] != a_.shape()[0] || W_.shape()[1] != a_.shape()[1]) a_ = tensor::Tensor({input.shape()[0],W_.shape()[1]});
+    if(input.rank() != z_.rank() || !std::equal(input.shape().begin(),input.shape().end() - 1,z_.shape().begin()) || W_.dim(W_.rank() - 1) != z_.dim(z_.rank() - 1)){
+      std::vector<int64_t> output_shape = input.shape();
 
-    tensor::MatrixView z_view = z_.as_matrix_view({});
+      output_shape.back() = W_.dim(W_.rank() - 1);
 
-    tensor::MatrixView::matmul(input.as_matrix_view({}),W_.as_matrix_view({}),z_view);
+      z_ = tensor::Tensor(output_shape);
+      a_ = tensor::Tensor(output_shape);
+    }
+
+    tensor::MatrixView z_view = z_.flatten_matrix_view();
+
+    tensor::MatrixView::matmul(input.flatten_matrix_view(),W_.as_matrix_view({}),z_view);
 
     add_bias_activation();
     
@@ -56,8 +61,8 @@ struct Dense : ILayer{
     float *ad = a_.data();
     const float *bd = b_.data();
 
-    int64_t rows = z_.shape()[0];
-    int64_t cols = z_.shape()[1];
+    int64_t rows = z_.numel() / z_.dim(z_.rank() - 1);
+    int64_t cols = z_.dim(z_.rank() - 1);
 
     for(size_t row = 0;row < rows;row++){
       for(size_t col = 0;col < cols;col++){
@@ -74,12 +79,12 @@ struct Dense : ILayer{
 
     if(grad_.shape() != input_ptr_->shape()) grad_ = tensor::Tensor(input_ptr_->shape());
 
-    const tensor::ConstMatrixView input_view = input_ptr_->as_matrix_view({});
+    const tensor::ConstMatrixView input_view = input_ptr_->flatten_matrix_view();
     const tensor::MatrixView W_view = W_.as_matrix_view({});
-    const tensor::MatrixView delta_view = delta_.as_matrix_view({});
+    const tensor::MatrixView delta_view = delta_.flatten_matrix_view();
 
     tensor::MatrixView dW_view = dW_.as_matrix_view({});
-    tensor::MatrixView grad_view = grad_.as_matrix_view({});
+    tensor::MatrixView grad_view = grad_.flatten_matrix_view();
 
     tensor::MatrixView::matmul_add(input_view.t(),delta_view,dW_view);
 
@@ -89,8 +94,8 @@ struct Dense : ILayer{
   }
 
   void delta_hadamard_add_db(const tensor::Tensor& grad_output){
-    if(delta_.shape()[1] != grad_output.shape()[1] || delta_.shape()[0] != grad_output.shape()[0]){
-      delta_ = tensor::Tensor({grad_output.shape()[0],grad_output.shape()[1]});
+    if(delta_.shape() != grad_output.shape()){
+      delta_ = tensor::Tensor(grad_output.shape());
     }
 
     float *dd = delta_.data();
@@ -99,8 +104,8 @@ struct Dense : ILayer{
     const float *zd = z_.data();
     const float *ad = a_.data();
 
-    const int64_t rows = delta_.shape()[0];
-    const int64_t cols = delta_.shape()[1];
+    const int64_t rows = delta_.numel() / delta_.dim(delta_.rank() - 1);
+    const int64_t cols = delta_.dim(delta_.rank() - 1);
 
     for(int64_t row = 0;row < rows;row++){
       const int64_t front = row * cols;

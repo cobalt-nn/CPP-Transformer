@@ -4,6 +4,7 @@
 #include <span>
 #include <cstdint>
 #include <stdexcept>
+#include <cassert>
 #include <string>
 #include "MatrixView.hpp"
 #include "nn/backend/backend.hpp"
@@ -101,6 +102,15 @@ public:
     return ConstMatrixView(shape_.at(shape_.size() - 2),shape_.at(shape_.size() - 1),&data()[n]);
   }
 
+  //最後の次元を行とした巨大行列として
+    MatrixView flatten_matrix_view(){
+    return MatrixView(numel() / dim(rank() - 1),dim(rank() - 1),data());
+  }
+
+    ConstMatrixView flatten_matrix_view() const{
+    return ConstMatrixView(numel() / dim(rank() - 1),dim(rank() - 1),data());
+  }
+
   /*//指定した範囲を
   MatrixView submatrix_view(...){
     return MatrixView(1,1,data());
@@ -177,6 +187,15 @@ public:
 
   inline const std::vector<int64_t>& stride() const noexcept{
     return stride_;
+  }
+
+  inline size_t rank() const{
+    return shape_.size();
+  }
+
+  inline int64_t dim(size_t i) const{
+    assert(i < shape_.size());
+    return shape_[i];
   }
 
   inline int64_t numel() const noexcept{

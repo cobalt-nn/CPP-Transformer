@@ -38,15 +38,20 @@ struct Linear : ILayer{
   tensor::Tensor grad_;//次の層に渡す勾配
 
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
-    if(input.shape().size() > 2) throw std::runtime_error("Linear: input must be 2D");//行列までのみ
     input_ptr_ = &input;
 
     //サイズが違うときだけ再確保
-    if(input.shape()[0] != output_.shape()[0] || W_.shape()[1] != output_.shape()[1]) output_ = tensor::Tensor({input.shape()[0],W_.shape()[1]});
+    if(input.rank() != output_.rank() || !std::equal(input.shape().begin(),input.shape().end() - 1,output_.shape().begin()) || W_.dim(W_.rank() - 1) != output_.dim(output_.rank() - 1)){
+      std::vector<int64_t> output_shape = input.shape();
 
-    tensor::MatrixView output_view = output_.as_matrix_view({});
+      output_shape.back() = W_.dim(W_.rank() - 1);
 
-    tensor::MatrixView::matmul(input.as_matrix_view({}),W_.as_matrix_view({}),output_view);
+      output_ = tensor::Tensor(output_shape);
+    }
+
+    tensor::MatrixView output_view = output_.flatten_matrix_view();
+
+    tensor::MatrixView::matmul(input.flatten_matrix_view(),W_.as_matrix_view({}),output_view);
 
     if(bias_){
       add_bias();
@@ -78,12 +83,12 @@ struct Linear : ILayer{
       add_db(grad_output);
     }
 
-    const tensor::ConstMatrixView input_view = input_ptr_->as_matrix_view({});
+    const tensor::ConstMatrixView input_view = input_ptr_->flatten_matrix_view();
     const tensor::ConstMatrixView W_view = W_.as_matrix_view({});
-    const tensor::ConstMatrixView grad_output_view = grad_output.as_matrix_view({});
+    const tensor::ConstMatrixView grad_output_view = grad_output.flatten_matrix_view();
 
     tensor::MatrixView dW_view = dW_.as_matrix_view({});
-    tensor::MatrixView grad_view = grad_.as_matrix_view({});
+    tensor::MatrixView grad_view = grad_.flatten_matrix_view();
 
     tensor::MatrixView::matmul_add(input_view.t(),grad_output_view,dW_view);
 

@@ -102,7 +102,7 @@ int main(){
 
   MNISTLoader mnist("data/train-images.idx3-ubyte", "data/train-labels.idx1-ubyte");
 
-  for(size_t i = 0;i < MNIST_size;i += batch_size){
+  for(size_t i = 0;i < MNIST_size - 2 * batch_size;i += batch_size){
     images.clear();
     labels.clear();
     for(size_t j = i;j < std::min(i + batch_size,MNIST_size);j++){
@@ -116,6 +116,9 @@ int main(){
 
     input.push_back(tensor::Tensor({static_cast<int64_t>(std::min(batch_size,MNIST_size - i)),784},images));
     target.push_back(tensor::Tensor({static_cast<int64_t>(std::min(batch_size,MNIST_size - i)),10},labels));
+
+    //input.push_back(tensor::Tensor({2,16,784},images));
+    //target.push_back(tensor::Tensor({2,16,10},labels));
   }
 
   Model model;
@@ -124,7 +127,7 @@ int main(){
     .add(std::make_unique<layer::RMSNorm>(784))
     .add(std::make_unique<layer::Dense>(784,256))
     .add(std::make_unique<layer::RMSNorm>(256))
-    .add(std::make_unique<layer::Dense>(256,64))
+    .add(std::make_unique<layer::Linear>(256,64))
     .add(std::make_unique<layer::RMSNorm>(64))
     .add(std::make_unique<layer::Dense>(64,10));
 
@@ -186,9 +189,9 @@ int main(){
     }
   }
 
-  std::cout << total_loss << std::endl;
+  std::cout << "total_loss: " << total_loss << std::endl;
 
-  std::cout << correct / static_cast<float>(total * batch_size) << std::endl;
+  std::cout << "correct: " << correct / static_cast<float>(total * batch_size) << std::endl;
 
   return 0;
 }
