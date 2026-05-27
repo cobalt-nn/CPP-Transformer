@@ -29,6 +29,15 @@ public:
     update_layout();
   }
 
+  //さらに細かくviewを切り出す
+  ConstMatrixView block(int64_t rows,int64_t cols,int64_t r,int64_t c,int64_t i,int64_t j) const{
+    return ConstMatrixView(rows,cols,row_stride_ * r,col_stride_ * c,base_ptr() + i * row_stride_ + j * col_stride_);
+  }
+
+  ConstMatrixView block(int64_t rows,int64_t cols,int64_t i,int64_t j) const{
+    return ConstMatrixView(rows,cols,row_stride_,col_stride_,base_ptr() + i * row_stride_ + j * col_stride_);
+  }
+
   inline const float& at(const int64_t row,const int64_t col) const{
     return data_[row * row_stride_ + col * col_stride_];
   }

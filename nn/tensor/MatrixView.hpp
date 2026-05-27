@@ -34,6 +34,23 @@ public:
     update_layout();
   }
 
+  //さらに細かくviewを切り出す
+  MatrixView block(int64_t rows,int64_t cols,int64_t r,int64_t c,int64_t i,int64_t j){
+    return MatrixView(rows,cols,row_stride_ * r,col_stride_ * c,base_ptr() + i * row_stride_ + j * col_stride_);
+  }
+
+  MatrixView block(int64_t rows,int64_t cols,int64_t i,int64_t j){
+    return MatrixView(rows,cols,row_stride_,col_stride_,base_ptr() + i * row_stride_ + j * col_stride_);
+  }
+
+  ConstMatrixView block(int64_t rows,int64_t cols,int64_t r,int64_t c,int64_t i,int64_t j) const{
+    return ConstMatrixView(rows,cols,row_stride_ * r,col_stride_ * c,base_ptr() + i * row_stride_ + j * col_stride_);
+  }
+
+  ConstMatrixView block(int64_t rows,int64_t cols,int64_t i,int64_t j) const{
+    return ConstMatrixView(rows,cols,row_stride_,col_stride_,base_ptr() + i * row_stride_ + j * col_stride_);
+  }
+
   //const問題を解決するためfloat*ではなくconst float*をメンバに持つものに変換する
   constexpr operator ConstMatrixView() const{
     return ConstMatrixView(rows_,cols_,row_stride_,col_stride_,data_);

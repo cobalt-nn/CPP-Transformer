@@ -53,43 +53,63 @@ struct Attention : ILayer{
 
     qkv_ = &qkv_linear_.forward(input,training);
 
+    //std::cout << qkv_->to_string() << std::endl;
+
+    const tensor::ConstMatrixView big_q_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,0);
+    const tensor::ConstMatrixView big_k_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,k_offset_);
+    const tensor::ConstMatrixView big_v_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_v_ * num_heads_,qkv_->dim(2),1,v_offset_);
+
+    //std::cout << big_q_view.to_string() << std::endl;
+    //std::cout << big_k_view.to_string() << std::endl;
+    //std::cout << big_v_view.to_string() << std::endl;
+
     forward_ensure_shape();
 
-    compute_scores();
+    compute_scores(big_q_view,big_k_view);
 
-    std::cout << "scores" << scores_.to_string() << std::endl;
+    //std::cout << "scores" << scores_.to_string() << std::endl;
 
     compute_weights();
 
-    std::cout << "weights" << weights_.to_string() << std::endl;
+    //std::cout << "weights" << weights_.to_string() << std::endl;
 
-    compute_output();
+    compute_output(big_v_view);
 
-    std::cout << "output" << output_.to_string() << std::endl;
+    //std::cout << "output" << output_.to_string() << std::endl;
 
     return output_;
   }
 
   //QKt / √d
-  void compute_scores(){
+  void compute_scores(const tensor::ConstMatrixView big_q_view,const tensor::ConstMatrixView big_k_view){
     const float rec_sqrt_d = 1.0f / std::sqrt(d_qk_);
 
     std::vector<int64_t> scores_dim = {0,0};
 
-    for(int64_t batch = 0;batch < qkv_->shape()[0];batch++){
+    for(int64_t batch = 0;batch < input_ptr_->shape()[0];batch++){
       scores_dim[0] = batch;
 
-      size_t index = batch * qkv_->stride()[0];
+      //size_t index = batch * qkv_->stride()[0];
       for(int64_t head = 0;head < num_heads_;head++){
         scores_dim[1] = head;
 
         tensor::MatrixView scores_view = scores_.as_matrix_view(scores_dim);
-        const tensor::ConstMatrixView q_view = qkv_->unsafe_matrix_view(qkv_->dim(1),d_qk_,qkv_->dim(2),1,index + head * d_qk_);
-        const tensor::ConstMatrixView k_view = qkv_->unsafe_matrix_view(qkv_->dim(1),d_qk_,qkv_->dim(2),1,index + head * d_qk_ + k_offset_);
+
+        const tensor::ConstMatrixView q_view = big_q_view.block(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_,
+          batch * big_q_view.numel() / big_q_view.cols() / input_ptr_->dim(0),head * d_qk_);
+
+        const tensor::ConstMatrixView k_view = big_k_view.block(big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_,
+          batch * big_k_view.numel() / big_k_view.cols() / input_ptr_->dim(0),head * d_qk_);
+
+        //const tensor::ConstMatrixView q_view = qkv_->unsafe_matrix_view(qkv_->dim(1),d_qk_,qkv_->dim(2),1,index + head * d_qk_);
+        //const tensor::ConstMatrixView k_view = qkv_->unsafe_matrix_view(qkv_->dim(1),d_qk_,qkv_->dim(2),1,index + head * d_qk_ + k_offset_);
+
+        //std::cout << q_view.to_string() << std::endl;
+        //std::cout << k_view.to_string() << std::endl;
 
         tensor::MatrixView::matmul_impl(rec_sqrt_d,q_view,k_view.t(),1,scores_view);
       }
-    } 
+    }
   }
 
   //softmax(scores_)
@@ -123,17 +143,21 @@ struct Attention : ILayer{
   }
 
   //weights_ @ V
-  void compute_output(){
+  void compute_output(const tensor::ConstMatrixView big_v_view){
     std::vector<int64_t> weights_dim = {0,0};
 
     for(int64_t batch = 0;batch < input_ptr_->shape()[0];batch++){
       weights_dim[0] = batch;
-      size_t v_index = batch * qkv_->stride()[0];
+
+      //size_t v_index = batch * qkv_->stride()[0];
 
       for(int64_t head = 0;head < num_heads_;head++){
         weights_dim[1] = head;
         const tensor::ConstMatrixView weights_view = weights_.as_matrix_view(weights_dim);
-        const tensor::ConstMatrixView v_view = qkv_->unsafe_matrix_view(qkv_->dim(1),d_v_,qkv_->dim(2),1,v_index + head * d_v_ + v_offset_);
+
+        const tensor::ConstMatrixView v_view = big_v_view.block(big_v_view.numel() / input_ptr_->dim(0) / big_v_view.cols(),d_v_,
+          batch * big_v_view.numel() / big_v_view.cols() / input_ptr_->dim(0),head * d_v_);
+
         tensor::MatrixView output_view = output_.unsafe_matrix_view(output_.dim(1),d_v_,output_.dim(2),1,output_.stride()[0] * batch + head * d_v_);
 
         tensor::MatrixView::matmul(weights_view,v_view,output_view);
