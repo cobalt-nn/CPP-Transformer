@@ -301,9 +301,13 @@ struct Attention : ILayer{
     if(sum_d_weights_.size() != d_weights_.numel() / d_weights_.dim(3)) sum_d_weights_ = std::vector<double>(d_weights_.numel() / d_weights_.dim(3));
   }
 
-  void step(float lr,int batch_size=64) override{}
+  void step(float lr,int batch_size=64) override{
+    qkv_linear_.step(lr,batch_size);
+  }
 
-  void zero_grad() override{}
+  void zero_grad() override{
+    qkv_linear_.zero_grad();
+  }
 
   std::string get_type() const override{
     return "Attention";
