@@ -36,11 +36,15 @@ int main(){
 
   tensor::Tensor t({8,2,8},v);
 
-  layer::Attention a(8,2,2,4);
+  layer::Attention a(8,2,2,2);
 
   a.random_init(gen);
 
-  std::cout << a.forward(t).to_string() << std::endl;
+  auto output = a.forward(t);
+
+  std::cout << output.to_string() << std::endl;
+
+  std::cout << a.backward(output).to_string() << std::endl;
 
   return 0;
 }
