@@ -121,8 +121,8 @@ struct Attention : ILayer{
     float *mwd = max_weights_.data();
 
     //最大の要素を求める
-    for(int64_t big_row = 0;big_row < scores_.numel() / scores_.dim(2);big_row++){
-      mwd[big_row] = *std::max_element(sd + big_row * scores_.dim(2),sd + (big_row + 1) * scores_.dim(2));
+    for(int64_t big_row = 0;big_row < scores_.numel() / scores_.dim(3);big_row++){
+      mwd[big_row] = *std::max_element(sd + big_row * scores_.dim(3),sd + (big_row + 1) * scores_.dim(3));
     }
 
     double *swd = sum_weights_.data();
@@ -130,8 +130,8 @@ struct Attention : ILayer{
     //exp(j - max)の合計値を求める
     for(int64_t big_row = 0;big_row < scores_.numel() / scores_.dim(3);big_row++){
       swd[big_row] = 0;
-      for(int64_t col = 0;col < scores_.dim(2);col++){
-        swd[big_row] += std::exp(scores_.data()[big_row * scores_.dim(2) + col] - mwd[big_row]);
+      for(int64_t col = 0;col < scores_.dim(3);col++){
+        swd[big_row] += std::exp(scores_.data()[big_row * scores_.dim(3) + col] - mwd[big_row]);
       }
     }
 
@@ -139,7 +139,7 @@ struct Attention : ILayer{
 
     //exp(j - max)の合計値を求める
     for(int64_t big_row = 0;big_row < scores_.numel() / scores_.dim(3);big_row++){
-      for(int64_t col = 0;col < scores_.dim(2);col++){
+      for(int64_t col = 0;col < scores_.dim(3);col++){
         wd[big_row * weights_.dim(3) + col] = static_cast<float>(std::exp(sd[big_row * weights_.dim(3) + col] - mwd[big_row]) / swd[big_row]);
       }
     }
@@ -234,7 +234,7 @@ struct Attention : ILayer{
 
         const tensor::ConstMatrixView grad_output_view = grad_output.unsafe_matrix_view(grad_output.dim(1),d_v_,grad_output.dim(2),1,grad_output.stride()[0] * batch + head * d_v_);
 
-        tensor::MatrixView::matmul_add(w_view.t(),grad_output_view,d_v_view);
+        tensor::MatrixView::matmul(w_view.t(),grad_output_view,d_v_view);
 
         tensor::MatrixView::matmul(grad_output_view,v_view.t(),dw_view);
       }

@@ -161,7 +161,7 @@ struct Dense : ILayer{
 
   //ランダム初期化する
   void random_init(std::mt19937 &gen) override{
-    float limit = sqrt(2.0f / (W_.shape()[0] + W_.shape()[1]));
+    float limit = sqrt(6.0f / (W_.shape()[0] + W_.shape()[1]));
     std::uniform_real_distribution<float> dist(-limit,limit);
 
     float *Wd = W_.data();

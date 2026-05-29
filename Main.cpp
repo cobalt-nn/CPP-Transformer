@@ -27,33 +27,34 @@ void set(tensor::Tensor &input,tensor::Tensor &output,std::mt19937 &gen){
   std::fill(input.data(),input.data() + input.numel(),0.0f);
   std::fill(output.data(),output.data() + output.numel(),0.0f);
 
-  std::vector<bool> v(8);
+  for(int batch = 0;batch < input.dim(0);batch++){
+    std::vector<bool> v(input.dim(1));
+    for(int i = 0;i < input.dim(1);i++){
+      uint32_t j = 0;
+      while(true){
+        j = gen() % 8;
 
-  for(int i = 0;i < 8;i++){
-    uint32_t j = 0;
-    while(true){
-      j = gen() % 8;
-
-      if(!v[j]){
-        v[j] = true;
-        break;
+        if(!v[j]){
+          v[j] = true;
+          break;
+        }
       }
-    }
 
-    input.at({0,i,j}) = 0.98f + i * 0.01f;
-    output.at({0,i,7 - j}) = 1.0f;
+      input.at({batch,i,j}) = 0.98f + i * 0.01f + j * 0.001f;
+      output.at({batch,i,7 - j}) = 1.0f;
+    }
   }
 }
 
 int main(){
-  tensor::Tensor input({1,8,8});
-  tensor::Tensor output({1,8,8});
+  tensor::Tensor input({2,8,8});
+  tensor::Tensor output({2,8,8});
 
   std::mt19937 gen(0);
 
   set(input,output,gen);
 
-  std::cout << input.to_string() << std::endl;
+  /*std::cout << input.to_string() << std::endl;
   std::cout << output.to_string() << std::endl;
 
   set(input,output,gen);
@@ -71,7 +72,7 @@ int main(){
   std::cout << input.to_string() << std::endl;
   std::cout << output.to_string() << std::endl;
 
-  return 0;
+  return 0;*/
 
   Model m;
 
@@ -84,12 +85,14 @@ int main(){
 
   m.random_init(gen);
 
-  for(int i = 0;i < 512;i++){
+  for(int i = 0;i < 100000000;i++){
     set(input,output,gen);
 
     auto &out = m.forward(input);
 
-    if(i % 32 == 0){
+    if(i % 512 == 0){
+      std::cout << i << std::endl;
+
       std::cout << input.to_string() << std::endl;
 
       std::cout << out.to_string() << std::endl;
