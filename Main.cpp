@@ -13,6 +13,7 @@
 #include "nn/layer/Linear.hpp"
 #include "nn/layer/RMSNorm.hpp"
 #include "nn/layer/Attention.hpp"
+#include "nn/layer/ReZero.hpp"
 #include "nn/ops/Activation.hpp"
 #include "nn/ops/Acts.hpp"
 #include "nn/ops/GEMM.hpp"
@@ -32,7 +33,7 @@ void set(tensor::Tensor &input,tensor::Tensor &output,std::mt19937 &gen){
     for(int i = 0;i < input.dim(1);i++){
       uint32_t j = 0;
       while(true){
-        j = gen() % 8;
+        j = gen() % input.dim(1);
 
         if(!v[j]){
           v[j] = true;
@@ -40,8 +41,14 @@ void set(tensor::Tensor &input,tensor::Tensor &output,std::mt19937 &gen){
         }
       }
 
-      input.at({batch,i,j}) = 0.98f + i * 0.01f + j * 0.001f;
-      output.at({batch,i,7 - j}) = 1.0f;
+      input.at({batch,i,j}) = 0.8f;
+      output.at({batch,input.dim(1) - 1 - i,j}) = 1.0f;
+    }
+
+    for(int i = 0;i < input.dim(1);i++){
+      for(int j = 0;j < input.dim(2);j++){
+        input.at({batch,i,j}) += 0.01f * i + 0.001f * j;
+      }
     }
   }
 }
@@ -77,10 +84,12 @@ int main(){
   Model m;
 
   m.add<layer::RMSNorm>(8)
-   .add<layer::Attention>(8,2,4,4)
+   //.add<layer::Attention>(8,2,4,4)
+   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,4,4))
    .add<layer::Dense>(8,8)
    .add<layer::RMSNorm>(8)
-   .add<layer::Attention>(8,2,4,4)
+   //.add<layer::Attention>(8,2,4,4)
+   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,4,4))
    .add<layer::Dense>(8,8);
 
   m.random_init(gen);
@@ -100,7 +109,7 @@ int main(){
 
     m.backward(out - output);
 
-    m.step(0.001f,1);
+    m.step(0.01f,1);
 
     m.zero_grad();
   }
