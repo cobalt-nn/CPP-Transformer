@@ -1,5 +1,6 @@
 #pragma once
 
+//#include <iostream>
 #include <string>
 #include <random>
 #include "nlohmann/json.hpp"
@@ -59,6 +60,8 @@ struct ReZero : ILayer{
     layer_->step(lr,batch_size);
 
     alpha_ -= d_alpha_ * lr;
+
+    //std::cout << "alpha:" << alpha_ << std::endl;
   }
 
   void zero_grad() override{

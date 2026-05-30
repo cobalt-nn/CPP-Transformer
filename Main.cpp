@@ -14,6 +14,7 @@
 #include "nn/layer/RMSNorm.hpp"
 #include "nn/layer/Attention.hpp"
 #include "nn/layer/ReZero.hpp"
+#include "nn/layer/FFN.hpp"
 #include "nn/ops/Activation.hpp"
 #include "nn/ops/Acts.hpp"
 #include "nn/ops/GEMM.hpp"
@@ -42,12 +43,13 @@ void set(tensor::Tensor &input,tensor::Tensor &output,std::mt19937 &gen){
       }
 
       input.at({batch,i,j}) = 0.8f;
-      output.at({batch,input.dim(1) - 1 - i,j}) = 1.0f;
+      output.at({batch,input.dim(1) - 1 - i,j}) = 0.8f;
     }
 
     for(int i = 0;i < input.dim(1);i++){
       for(int j = 0;j < input.dim(2);j++){
-        input.at({batch,i,j}) += 0.01f * i + 0.001f * j;
+        input.at({batch,i,j}) += 0.03f * i + 0.005f * j;
+        output.at({batch,i,j}) += 0.03f * i + 0.005f * j;
       }
     }
   }
@@ -84,13 +86,13 @@ int main(){
   Model m;
 
   m.add<layer::RMSNorm>(8)
-   //.add<layer::Attention>(8,2,4,4)
    .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,4,4))
-   .add<layer::Dense>(8,8)
    .add<layer::RMSNorm>(8)
-   //.add<layer::Attention>(8,2,4,4)
+   .add<layer::ReZero>(8,8,std::make_unique<layer::FFN>(8))
+   .add<layer::RMSNorm>(8)
    .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,4,4))
-   .add<layer::Dense>(8,8);
+   .add<layer::RMSNorm>(8)
+   .add<layer::ReZero>(8,8,std::make_unique<layer::FFN>(8));
 
   m.random_init(gen);
 
