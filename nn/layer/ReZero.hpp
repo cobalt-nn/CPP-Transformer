@@ -76,7 +76,9 @@ struct ReZero : ILayer{
   }
 
   std::string to_string() const override{
-    return get_type() + "::to_string() is undef";
+    std::string s = get_type() + "\n" + WO_.to_string() + "\n";
+    s += layer_->to_string();
+    return s;
   }
 
   //json形式で保存するとき使う

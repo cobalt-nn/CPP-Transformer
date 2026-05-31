@@ -14,11 +14,11 @@ namespace cobalt_715::nn::layer{
 struct FFN : ILayer{
   FFN(int64_t in)
     : dense_(in,in * 4),
-      linear_(in * 4,in){}
+      linear_(in * 4,in,true){}
 
   FFN(int64_t in,int64_t out1,int64_t out2)
     : dense_(in,out1),
-      linear_(out1,out2){}
+      linear_(out1,out2,true){}
 
   Dense dense_;
   Linear linear_;

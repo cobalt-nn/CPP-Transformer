@@ -42,14 +42,14 @@ void set(tensor::Tensor &input,tensor::Tensor &output,std::mt19937 &gen){
         }
       }
 
-      input.at({batch,i,j}) = 0.8f;
-      output.at({batch,input.dim(1) - 1 - i,j}) = 0.8f;
+      input.at({batch,i,j}) = 1.3f;
+      output.at({batch,input.dim(1) - 1 - i,j}) = 1.3f;
     }
 
     for(int i = 0;i < input.dim(1);i++){
       for(int j = 0;j < input.dim(2);j++){
-        input.at({batch,i,j}) += 0.03f * i + 0.005f * j;
-        output.at({batch,i,j}) += 0.03f * i + 0.005f * j;
+        input.at({batch,i,j}) += 0.1f * (i - input.dim(1) / 2) + 0.03f * (j - input.dim(2) / 2);
+        output.at({batch,input.dim(1) - 1 - i,j}) += 0.1f * (i - input.dim(1) / 2) + 0.03f * (j - input.dim(2) / 2);
       }
     }
   }
@@ -58,6 +58,22 @@ void set(tensor::Tensor &input,tensor::Tensor &output,std::mt19937 &gen){
 int main(){
   tensor::Tensor input({2,8,8});
   tensor::Tensor output({2,8,8});
+
+  /*tensor::Tensor input({2,3,4});
+  tensor::Tensor output({2,3,6});
+
+  for(int i = 0;i < output.numel();i++){
+    output.data()[i] = i / 10.0f;
+  }
+
+  std::cout << "output" << output.to_string() << std::endl;
+
+  layer::Attention a(4,2,2,3);
+
+  std::cout << a.forward(input).to_string() << std::endl;
+  std::cout << a.backward(output).to_string() << std::endl;
+
+  return 0;*/
 
   std::mt19937 gen(0);
 
@@ -87,12 +103,17 @@ int main(){
 
   m.add<layer::RMSNorm>(8)
    .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,4,4))
+   //.add<layer::Attention>(8,2,4,4);
    .add<layer::RMSNorm>(8)
    .add<layer::ReZero>(8,8,std::make_unique<layer::FFN>(8))
+   //.add<layer::FFN>(8)
    .add<layer::RMSNorm>(8)
    .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,4,4))
+   //.add<layer::Attention>(8,2,4,4);
    .add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::FFN>(8));
+   .add<layer::ReZero>(8,8,std::make_unique<layer::FFN>(8))
+   //.add<layer::FFN>(8)
+   ;
 
   m.random_init(gen);
 
@@ -101,17 +122,19 @@ int main(){
 
     auto &out = m.forward(input);
 
-    if(i % 512 == 0){
-      std::cout << i << std::endl;
+    if(i % 1024 == 0){
+      std::cout << "time: " << i << std::endl;
 
-      std::cout << input.to_string() << std::endl;
+      std::cout << "input" << input.to_string() << std::endl;
 
-      std::cout << out.to_string() << std::endl;
+      std::cout << "out" << out.to_string() << std::endl;
+
+      //std::cout << m.to_string() << std::endl;
     }
 
     m.backward(out - output);
 
-    m.step(0.01f,1);
+    m.step(0.001f,1);
 
     m.zero_grad();
   }

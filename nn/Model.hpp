@@ -84,7 +84,7 @@ public:
     std::string s;
 
     for(auto &l:layers_){
-      s += l->to_string();
+      s += l->to_string() + "\n";
     }
 
     return s;
