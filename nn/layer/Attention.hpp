@@ -91,8 +91,8 @@ struct Attention : ILayer{
     static int64_t count = 0;
     if(count % 1024 == 0){
       std::cout << "scores_mx" << mx << std::endl;
-      std::cout << "scores" << scores_.to_string() << std::endl;
-      std::cout << "weights" << weights_.to_string() << std::endl;
+      //std::cout << "scores" << scores_.to_string() << std::endl;
+      //std::cout << "weights" << weights_.to_string() << std::endl;
     }
     count++;
 

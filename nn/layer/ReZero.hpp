@@ -30,7 +30,11 @@ struct ReZero : ILayer{
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
     WO_output_ptr_ = &WO_.forward(layer_->forward(input,training),training);
 
-    if(output_.shape() != input.shape()) output_ = tensor::Tensor(input.shape());
+    if(output_.shape() != input.shape()){
+      output_ = tensor::Tensor(input.shape());
+    }else{
+      std::fill(output_.data(),output_.data() + output_.numel(),0.0f);
+    }
 
     tensor::Tensor::scale(*WO_output_ptr_,alpha_,output_);
 
@@ -40,7 +44,11 @@ struct ReZero : ILayer{
   }
 
   const tensor::Tensor& backward(const tensor::Tensor& grad_output) override{
-    if(grad_.shape() != grad_output.shape()) grad_ = tensor::Tensor(grad_output.shape());
+    if(grad_.shape() != grad_output.shape()){
+      grad_ = tensor::Tensor(grad_output.shape());
+    }else{
+      std::fill(grad_.data(),grad_.data() + grad_.numel(),0.0f);
+    }
 
     tensor::Tensor::scale(layer_->backward(WO_.backward(grad_output)),alpha_,grad_);
 

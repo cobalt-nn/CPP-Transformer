@@ -30,17 +30,8 @@ void set(tensor::Tensor &input,tensor::Tensor &output,std::mt19937 &gen){
   std::fill(output.data(),output.data() + output.numel(),0.0f);
 
   for(int batch = 0;batch < input.dim(0);batch++){
-    std::vector<bool> v(input.dim(1));
     for(int i = 0;i < input.dim(1);i++){
-      uint32_t j = 0;
-      while(true){
-        j = gen() % input.dim(1);
-
-        if(!v[j]){
-          v[j] = true;
-          break;
-        }
-      }
+      uint32_t j = gen() % input.dim(2);
 
       input.at({batch,i,j}) = 1.3f;
       output.at({batch,input.dim(1) - 1 - i,j}) = 1.3f;
@@ -48,8 +39,8 @@ void set(tensor::Tensor &input,tensor::Tensor &output,std::mt19937 &gen){
 
     for(int i = 0;i < input.dim(1);i++){
       for(int j = 0;j < input.dim(2);j++){
-        input.at({batch,i,j}) += 0.1f * (i - input.dim(1) / 2) + 0.03f * (j - input.dim(2) / 2);
-        output.at({batch,input.dim(1) - 1 - i,j}) += 0.1f * (i - input.dim(1) / 2) + 0.03f * (j - input.dim(2) / 2);
+        input.at({batch,i,j}) += 0.05f * (i - input.dim(1) / 2) + 0.005f * (j - input.dim(2) / 2);
+        output.at({batch,input.dim(1) - 1 - i,j}) += 0.05f * (i - input.dim(1) / 2) + 0.005f * (j - input.dim(2) / 2);
       }
     }
   }
@@ -102,22 +93,18 @@ int main(){
   Model m;
 
   m.add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,4,4))
-   //.add<layer::Attention>(8,2,4,4);
+   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4))
    .add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::FFN>(8))
-   //.add<layer::FFN>(8)
+   .add<layer::FFN>(8)
    .add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,4,4))
-   //.add<layer::Attention>(8,2,4,4);
+   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4))
    .add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::FFN>(8))
-   //.add<layer::FFN>(8)
+   .add<layer::FFN>(8)
    ;
 
   m.random_init(gen);
 
-  for(int i = 0;i < 100000000;i++){
+  for(int i = 0;i < 1200000;i++){
     set(input,output,gen);
 
     auto &out = m.forward(input);
@@ -134,10 +121,24 @@ int main(){
 
     m.backward(out - output);
 
-    m.step(0.001f,1);
+    if(i % 4 == 0){
+      m.step(0.001f / 8.0f,1);
 
-    m.zero_grad();
+      m.zero_grad();
+    }
   }
+
+  tensor::Tensor input2({1,16,8});
+  tensor::Tensor output2({1,16,8});
+
+  for(int64_t i = 0;i < 32;i++){
+    set(input2,output2,gen);
+
+    std::cout << "input2" << input2.to_string() << std::endl;
+    std::cout << "out" << m.forward(input2).to_string() << std::endl;
+  }
+
+  std::cout << "end" << std::endl;
 
   return 0;
 }
