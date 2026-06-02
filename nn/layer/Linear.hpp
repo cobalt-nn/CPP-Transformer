@@ -64,8 +64,8 @@ struct Linear : ILayer{
     float *od = output_.data();
     const float *bd = b_.data();
 
-    int64_t rows = output_.shape()[0];
-    int64_t cols = output_.shape()[1];
+    int64_t rows = output_.numel() / output_.dim(output_.rank() - 1);
+    int64_t cols = output_.dim(output_.rank() - 1);
 
     for(size_t row = 0;row < rows;row++){
       for(size_t col = 0;col < cols;col++){
@@ -101,8 +101,8 @@ struct Linear : ILayer{
     float *dbd = db_.data();
     const float *gd = grad_output.data();
 
-    const int64_t rows = grad_output.shape()[0];
-    const int64_t cols = grad_output.shape()[1];
+    const int64_t rows = grad_output.numel() / grad_output.dim(grad_output.rank() - 1);
+    const int64_t cols = grad_output.dim(grad_output.rank() - 1);
 
     for(int64_t row = 0;row < rows;row++){
       const int64_t front = row * cols;

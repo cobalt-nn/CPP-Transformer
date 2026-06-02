@@ -104,7 +104,7 @@ int main(){
 
   m.random_init(gen);
 
-  for(int i = 0;i < 1200000;i++){
+  for(int i = 0;i < 16;i++){
     set(input,output,gen);
 
     auto &out = m.forward(input);
