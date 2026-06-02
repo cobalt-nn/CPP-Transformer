@@ -119,7 +119,7 @@ int main(){
       //std::cout << m.to_string() << std::endl;
     }
 
-    m.backward(out - output);
+    //m.backward(out - output);
 
     if(i % 4 == 0){
       m.step(0.001f / 8.0f,1);

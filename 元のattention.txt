@@ -29,52 +29,7 @@ struct Attention : ILayer{
       d_weights_({1,1,1,1}),
       d_scores_({1,1,1,1}){}
 
-  struct KVCache{
-    KVCache(int64_t d_k,int64_t d_v,int64_t max_length)
-      : K_({max_length,d_k}),
-        V_({max_length,d_v}),
-        max_length_(max_length){}
-
-    void add(const tensor::ConstMatrixView k_view,const tensor::ConstMatrixView v_view){
-      if(k_view.rows() != 1) throw std::runtime_error("Attention::KVCache k_view.rows() must be 1");
-      if(v_view.rows() != 1) throw std::runtime_error("Attention::KVCache v_view.rows() must be 1");
-
-      if(k_view.cols() != K_.dim(1)) throw std::runtime_error("Attention::KVCache k_view.cols() mismatch");
-      if(v_view.cols() != V_.dim(1)) throw std::runtime_error("Attention::KVCache v_view.cols() mismatch");
-
-      if(current_length_ >= max_length_) throw std::runtime_error("Attention::KVCache token is over");
-
-      float *kd = &K_.at({current_length_,0});
-
-      for(int64_t i = 0;i < K_.dim(1);i++){
-        kd[i] = k_view.at(0,i);
-      }
-
-      float *vd = &V_.at({current_length_,0});
-
-      for(int64_t i = 0;i < V_.dim(1);i++){
-        vd[i] = v_view.at(0,i);
-      }
-
-      current_length_++;
-    }
-
-    const tensor::ConstMatrixView get_k_view() const{
-      return K_.unsafe_matrix_view(current_length_,K_.dim(1),K_.dim(1),1,0);
-    }
-
-    const tensor::ConstMatrixView get_v_view() const{
-      return V_.unsafe_matrix_view(current_length_,V_.dim(1),V_.dim(1),1,0);
-    }
-
-  private:
-    tensor::Tensor K_;
-    tensor::Tensor V_;
-    int64_t current_length_ = 0;
-    int64_t max_length_ = 0;
-  };
-
-  const tensor::Tensor *input_ptr_ = nullptr;
+  const tensor::Tensor *input_ptr_;
 
   Linear qkv_linear_;//Q,K,Vを計算するアフィン変換層
 
@@ -111,7 +66,7 @@ struct Attention : ILayer{
     //std::cout << big_k_view.to_string() << std::endl;
     //std::cout << big_v_view.to_string() << std::endl;
 
-    forward_ensure_shape(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols());
+    forward_ensure_shape();
 
     compute_scores(big_q_view,big_k_view);
 
@@ -173,13 +128,10 @@ struct Attention : ILayer{
           //std::cout << "q_view" << q_view.to_string() << std::endl;
           //std::cout << "k_view" << k_view.to_string() << std::endl;
           //std::cout << "scores_view" << scores_view.to_string() << std::endl;
-          //std::cout << "scores_view" << scores_view.to_string() << std::endl;
         }
         count++;
 
         tensor::MatrixView::matmul_impl(rec_sqrt_d,q_view,k_view.t(),0,scores_view);
-
-        //std::cout << "compute_scores end" << std::endl;
       }
     }
   }
@@ -232,25 +184,23 @@ struct Attention : ILayer{
 
         tensor::MatrixView output_view = output_.unsafe_matrix_view(output_.dim(1),d_v_,output_.dim(2),1,output_.stride()[0] * batch + head * d_v_);
 
-        static int64_t count = 0;
-        if(count % 1024 == 0){
-          std::cout << "v_view" << v_view.to_string();
-          std::cout << "weights_view" << weights_view.to_string();
-          std::cout << "output_view" << output_view.to_string();
-        }
-        count++;
-
         tensor::MatrixView::matmul(weights_view,v_view,output_view);
 
+        static int64_t count = 0;
+        if(count % 1024 == 0){
+          //std::cout << "v_view" << v_view.to_string();
+          //std::cout << "weights_view" << weights_view.to_string();
+        }
+        count++;
       }
     }
   }
 
   //条件によりcontext_,weights_,output_,sum_weights_,max_weights_再確保
-  void forward_ensure_shape(int64_t q_rows){
-    if(input_ptr_->shape()[1] != scores_.shape()[3] || scores_.shape()[2] != q_rows || input_ptr_->shape()[0] != scores_.shape()[0] || scores_.shape()[1] != num_heads_){
-      scores_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,q_rows,input_ptr_->shape()[1]});
-      weights_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,q_rows,input_ptr_->shape()[1]});
+  void forward_ensure_shape(){
+    if(scores_.shape()[2] != input_ptr_->shape()[1] || input_ptr_->shape()[0] != scores_.shape()[0] || scores_.shape()[1] != num_heads_ || scores_.shape()[2] != scores_.shape()[3]){
+      scores_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,input_ptr_->shape()[1],input_ptr_->shape()[1]});
+      weights_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,input_ptr_->shape()[1],input_ptr_->shape()[1]});
     }else{
       std::fill(weights_.data(),weights_.data() + weights_.numel(),0.0f);
       std::fill(scores_.data(),scores_.data() + scores_.numel(),0.0f);
