@@ -36,27 +36,34 @@ struct Attention : ILayer{
         max_length_(max_length){}
 
     void add(const tensor::ConstMatrixView k_view,const tensor::ConstMatrixView v_view){
-      if(k_view.rows() != 1) throw std::runtime_error("Attention::KVCache k_view.rows() must be 1");
-      if(v_view.rows() != 1) throw std::runtime_error("Attention::KVCache v_view.rows() must be 1");
+      if(k_view.rows() != v_view.rows()) throw std::runtime_error("Attention::KVCache k_view.rows() != v_view.rows()");
 
       if(k_view.cols() != K_.dim(1)) throw std::runtime_error("Attention::KVCache k_view.cols() mismatch");
       if(v_view.cols() != V_.dim(1)) throw std::runtime_error("Attention::KVCache v_view.cols() mismatch");
 
-      if(current_length_ >= max_length_) throw std::runtime_error("Attention::KVCache token is over");
+      if(current_length_ + k_view.rows() > max_length_) throw std::runtime_error("Attention::KVCache KV cache overflow");
 
-      float *kd = &K_.at({current_length_,0});
+      tensor::MatrixView this_k_view = K_.unsafe_matrix_view(k_view.rows(),k_view.cols(),k_view.cols(),1,current_length_ * k_view.cols());
 
-      for(int64_t i = 0;i < K_.dim(1);i++){
-        kd[i] = k_view.at(0,i);
+      //this_k_view += k_view;
+
+      for(int64_t row = 0;row < k_view.rows();row++){
+        for(int64_t col = 0;col < k_view.cols();col++){
+          this_k_view.at(row,col) = k_view.at(row,col);
+        }
       }
 
-      float *vd = &V_.at({current_length_,0});
+      tensor::MatrixView this_v_view = V_.unsafe_matrix_view(v_view.rows(),v_view.cols(),v_view.cols(),1,current_length_ * v_view.cols());
 
-      for(int64_t i = 0;i < V_.dim(1);i++){
-        vd[i] = v_view.at(0,i);
+      //this_v_view += v_view;
+
+      for(int64_t row = 0;row < v_view.rows();row++){
+        for(int64_t col = 0;col < v_view.cols();col++){
+          this_v_view.at(row,col) = v_view.at(row,col);
+        }
       }
 
-      current_length_++;
+      current_length_ += k_view.rows();
     }
 
     const tensor::ConstMatrixView get_k_view() const{
