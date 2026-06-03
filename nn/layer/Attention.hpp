@@ -92,6 +92,14 @@ struct Attention : ILayer{
       return V_.unsafe_matrix_view(current_length_,V_.dim(1),V_.dim(1),1,0);
     }
 
+    int64_t get_current_len() const{
+      return current_length_;
+    }
+
+    int64_t get_max_len() const{
+      return max_length_;
+    }
+
   private:
     tensor::Tensor K_;
     tensor::Tensor V_;
@@ -122,6 +130,7 @@ struct Attention : ILayer{
 
   std::vector<float> max_weights_;
   std::vector<double> sum_weights_;
+  std::vector<int64_t> mask_col_ends_;//マスクするときscores_の各行の終端を保持する
 
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
     if(input.rank() != 3) throw std::runtime_error("Attention: input must be 3D");
@@ -155,7 +164,7 @@ struct Attention : ILayer{
 
     //std::cout << "scores" << scores_.to_string() << std::endl;
 
-    compute_weights();
+    compute_weights(training);
 
     //weights_ = scores_;
 
@@ -214,7 +223,7 @@ struct Attention : ILayer{
         //}
         count++;
 
-        std::cout << "before matmul_impl(rec_sqrt_d,q_view,k_view.t(),0,scores_view)" << std::endl;
+        //std::cout << "before matmul_impl(rec_sqrt_d,q_view,k_view.t(),0,scores_view)" << std::endl;
 
         tensor::MatrixView::matmul_impl(rec_sqrt_d,q_view,k_view.t(),0,scores_view);
 
@@ -224,31 +233,47 @@ struct Attention : ILayer{
   }
 
   //softmax(scores_)
-  void compute_weights(){
-    const float *sd = scores_.data();
-    float *mwd = max_weights_.data();
-
-    //最大の要素を求める
-    for(int64_t big_row = 0;big_row < scores_.numel() / scores_.dim(3);big_row++){
-      mwd[big_row] = *std::max_element(sd + big_row * scores_.dim(3),sd + (big_row + 1) * scores_.dim(3));
-    }
-
-    double *swd = sum_weights_.data();
-
-    //exp(j - max)の合計値を求める
-    for(int64_t big_row = 0;big_row < scores_.numel() / scores_.dim(3);big_row++){
-      swd[big_row] = 0;
-      for(int64_t col = 0;col < scores_.dim(3);col++){
-        swd[big_row] += std::exp(scores_.data()[big_row * scores_.dim(3) + col] - mwd[big_row]);
+  void compute_weights(bool training){
+    if(mask_bool_){
+      for(int row = 0;row < weights_.dim(2);row++){
+        if(training){
+          mask_col_ends_[row] = row + 1;
+        }else{
+          mask_col_ends_[row] = cache_.value().get_current_len() - weights_.dim(2) + row + 1;
+        }
       }
     }
 
-    float *wd = weights_.data();
+    for(int64_t batch = 0;batch < weights_.dim(0);batch++){
+      for(int64_t head = 0;head < weights_.dim(1);head++){
+        tensor::MatrixView scores_view = scores_.as_matrix_view({batch,head});//行連続
+        tensor::MatrixView weights_view = weights_.as_matrix_view({batch,head});//行連続
 
-    //exp(j - max)の合計値を求める
-    for(int64_t big_row = 0;big_row < scores_.numel() / scores_.dim(3);big_row++){
-      for(int64_t col = 0;col < scores_.dim(3);col++){
-        wd[big_row * weights_.dim(3) + col] = static_cast<float>(std::exp(sd[big_row * weights_.dim(3) + col] - mwd[big_row]) / swd[big_row]);
+        //std::cout << "weights_view" << weights_view.to_string() << std::endl;
+
+        //最大の要素を求める
+        for(int64_t row = 0;row < weights_.dim(2);row++){
+          max_weights_[row] = *std::max_element(&scores_view.at(row,0),&scores_view.at(row,mask_col_ends_[row]));
+        }
+
+        //exp(col - max)の合計値を求める
+        for(int64_t row = 0;row < weights_.dim(2);row++){
+          sum_weights_[row] = 0;
+          for(int64_t col = 0;col < mask_col_ends_[row];col++){
+            sum_weights_[row] += std::exp(scores_view.at(row,col) - max_weights_[row]);
+          }
+        }
+
+        //std::cout << "weights_view" << weights_view.to_string() << std::endl;
+
+        //softmaxを求める
+        for(int64_t row = 0;row < weights_.dim(2);row++){
+          for(int64_t col = 0;col < mask_col_ends_[row];col++){
+            weights_view.at(row,col) = static_cast<float>(std::exp(scores_view.at(row,col) - max_weights_[row]) / sum_weights_[row]);
+          }
+        }
+
+        std::cout << "weights_view" << weights_view.to_string() << std::endl;
       }
     }
   }
@@ -301,12 +326,14 @@ struct Attention : ILayer{
       std::fill(output_.data(),output_.data() + output_.numel(),0.0f);
     }
 
-    if(sum_weights_.size() != scores_.numel() / scores_.dim(3) || sum_weights_.size() != max_weights_.size()){
-      sum_weights_ = std::vector<double>(scores_.numel() / scores_.dim(3));
-      max_weights_ = std::vector<float>(scores_.numel() / scores_.dim(3));
+    if(sum_weights_.size() != scores_.dim(2) || sum_weights_.size() != max_weights_.size() || sum_weights_.size() != mask_col_ends_.size()){
+      sum_weights_ = std::vector<double>(scores_.dim(2));
+      max_weights_ = std::vector<float>(scores_.dim(2));
+      mask_col_ends_ = std::vector<int64_t>(scores_.dim(2));
     }else{
       std::fill(sum_weights_.begin(),sum_weights_.end(),0.0f);
       std::fill(max_weights_.begin(),max_weights_.end(),0.0f);
+      std::fill(mask_col_ends_.begin(),mask_col_ends_.end(),scores_.dim(3));
     }
   }
 

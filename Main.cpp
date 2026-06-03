@@ -93,11 +93,11 @@ int main(){
   Model m;
 
   m.add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4,64,false))
+   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4,64,true))
    .add<layer::RMSNorm>(8)
    .add<layer::FFN>(8)
    .add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4,64,false))
+   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4,64,true))
    .add<layer::RMSNorm>(8)
    .add<layer::FFN>(8)
    ;
