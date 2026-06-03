@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 #include <random>
@@ -27,7 +28,24 @@ struct Attention : ILayer{
       output_({1,1,1}),
       d_qkv_({1,1,1}),
       d_weights_({1,1,1,1}),
-      d_scores_({1,1,1,1}){}
+      d_scores_({1,1,1,1}),
+      mask_bool_(false){}
+
+  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v,int64_t kv_cache_max_length,bool mask)
+    : qkv_linear_(in,num_heads * (d_qk * 2 + d_v),true),
+      num_heads_(num_heads),
+      d_qk_(d_qk),
+      d_v_(d_v),
+      k_offset_(d_qk * num_heads),
+      v_offset_(2 * d_qk * num_heads),
+      scores_({1,1,1,1}),
+      weights_({1,1,1,1}),
+      output_({1,1,1}),
+      d_qkv_({1,1,1}),
+      d_weights_({1,1,1,1}),
+      d_scores_({1,1,1,1}),
+      cache_(KVCache(d_qk * num_heads,d_v * num_heads,kv_cache_max_length)),
+      mask_bool_(mask){}
 
   struct KVCache{
     KVCache(int64_t d_k,int64_t d_v,int64_t max_length)
@@ -81,6 +99,10 @@ struct Attention : ILayer{
     int64_t max_length_ = 0;
   };
 
+  const bool mask_bool_;
+
+  std::optional<KVCache> cache_ = std::nullopt;//forward()の引数trainingがfalseかつKVCacheが存在するときキャッシュする
+
   const tensor::Tensor *input_ptr_ = nullptr;
 
   Linear qkv_linear_;//Q,K,Vを計算するアフィン変換層
@@ -110,15 +132,24 @@ struct Attention : ILayer{
 
     //std::cout << qkv_->to_string() << std::endl;
 
-    const tensor::ConstMatrixView big_q_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,0);
-    const tensor::ConstMatrixView big_k_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,k_offset_);
-    const tensor::ConstMatrixView big_v_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_v_ * num_heads_,qkv_->dim(2),1,v_offset_);
+    tensor::ConstMatrixView big_q_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,0);
+    tensor::ConstMatrixView big_k_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,k_offset_);
+    tensor::ConstMatrixView big_v_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_v_ * num_heads_,qkv_->dim(2),1,v_offset_);
 
-    //std::cout << big_q_view.to_string() << std::endl;
-    //std::cout << big_k_view.to_string() << std::endl;
-    //std::cout << big_v_view.to_string() << std::endl;
+    if(cache_ && !training){
+      if(input.dim(0) != 1) throw std::runtime_error("Attention: KV cache is true && training is false batch must be 1");
 
-    forward_ensure_shape(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols());
+      cache_.value().add(big_k_view,big_v_view);
+
+      big_k_view = cache_.value().get_k_view();
+      big_v_view = cache_.value().get_v_view();
+    }
+
+    //std::cout << "big_q_view" << big_q_view.to_string() << std::endl;
+    //std::cout << "big_k_view" << big_k_view.to_string() << std::endl;
+    //std::cout << "big_v_view" << big_v_view.to_string() << std::endl;
+
+    forward_ensure_shape(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols());
 
     compute_scores(big_q_view,big_k_view);
 
@@ -176,13 +207,14 @@ struct Attention : ILayer{
         //const tensor::ConstMatrixView k_view = qkv_->unsafe_matrix_view(qkv_->dim(1),d_qk_,qkv_->dim(2),1,index + head * d_qk_ + k_offset_);
 
         static int64_t count = 0;
-        if(count % 512 == 0){
+        //if(count % 512 == 0){
           //std::cout << "q_view" << q_view.to_string() << std::endl;
           //std::cout << "k_view" << k_view.to_string() << std::endl;
           //std::cout << "scores_view" << scores_view.to_string() << std::endl;
-          //std::cout << "scores_view" << scores_view.to_string() << std::endl;
-        }
+        //}
         count++;
+
+        std::cout << "before matmul_impl(rec_sqrt_d,q_view,k_view.t(),0,scores_view)" << std::endl;
 
         tensor::MatrixView::matmul_impl(rec_sqrt_d,q_view,k_view.t(),0,scores_view);
 
@@ -241,9 +273,9 @@ struct Attention : ILayer{
 
         static int64_t count = 0;
         if(count % 1024 == 0){
-          std::cout << "v_view" << v_view.to_string();
-          std::cout << "weights_view" << weights_view.to_string();
-          std::cout << "output_view" << output_view.to_string();
+          //std::cout << "v_view" << v_view.to_string();
+          //std::cout << "weights_view" << weights_view.to_string();
+          //std::cout << "output_view" << output_view.to_string();
         }
         count++;
 
@@ -254,10 +286,10 @@ struct Attention : ILayer{
   }
 
   //条件によりcontext_,weights_,output_,sum_weights_,max_weights_再確保
-  void forward_ensure_shape(int64_t q_rows){
-    if(input_ptr_->shape()[1] != scores_.shape()[3] || scores_.shape()[2] != q_rows || input_ptr_->shape()[0] != scores_.shape()[0] || scores_.shape()[1] != num_heads_){
-      scores_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,q_rows,input_ptr_->shape()[1]});
-      weights_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,q_rows,input_ptr_->shape()[1]});
+  void forward_ensure_shape(int64_t q_rows,int64_t k_rows){
+    if(k_rows != scores_.shape()[3] || scores_.shape()[2] != q_rows || input_ptr_->shape()[0] != scores_.shape()[0] || scores_.shape()[1] != num_heads_){
+      scores_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,q_rows,k_rows});
+      weights_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,q_rows,k_rows});
     }else{
       std::fill(weights_.data(),weights_.data() + weights_.numel(),0.0f);
       std::fill(scores_.data(),scores_.data() + scores_.numel(),0.0f);

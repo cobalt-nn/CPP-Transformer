@@ -47,41 +47,6 @@ void set(tensor::Tensor &input,tensor::Tensor &output,std::mt19937 &gen){
 }
 
 int main(){
-  layer::Attention::KVCache cache(4,8,16);
-
-  std::vector<float> k = {1,2,3,4};
-
-  tensor::Tensor kt({1,4},k);
-
-  std::vector<float> v = {1,2,3,4,5,6,7,8};
-
-  tensor::Tensor vt({1,8},v);
-
-  cache.add(kt.flatten_matrix_view(),vt.flatten_matrix_view());
-
-  std::cout << cache.get_k_view().to_string() << std::endl;
-  std::cout << cache.get_v_view().to_string() << std::endl;
-
-  cache.add(kt.flatten_matrix_view(),vt.flatten_matrix_view());
-
-  std::cout << cache.get_k_view().to_string() << std::endl;
-  std::cout << cache.get_v_view().to_string() << std::endl;
-
-  k = {10,11,12,13,14,15,16,17};
-
-  kt = tensor::Tensor({2,4},k);
-
-  v = {21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36};
-
-  vt = tensor::Tensor({2,8},v);
-
-  cache.add(kt.flatten_matrix_view(),vt.flatten_matrix_view());
-
-  std::cout << cache.get_k_view().to_string() << std::endl;
-  std::cout << cache.get_v_view().to_string() << std::endl;
-
-  return 0;
-
   tensor::Tensor input({2,8,8});
   tensor::Tensor output({2,8,8});
 
@@ -128,11 +93,11 @@ int main(){
   Model m;
 
   m.add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4))
+   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4,64,false))
    .add<layer::RMSNorm>(8)
    .add<layer::FFN>(8)
    .add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4))
+   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4,64,false))
    .add<layer::RMSNorm>(8)
    .add<layer::FFN>(8)
    ;
@@ -170,7 +135,7 @@ int main(){
     set(input2,output2,gen);
 
     std::cout << "input2" << input2.to_string() << std::endl;
-    std::cout << "out" << m.forward(input2).to_string() << std::endl;
+    std::cout << "out\n" << m.forward(input2,false).to_string() << std::endl;
   }
 
   std::cout << "end" << std::endl;
