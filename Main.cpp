@@ -13,6 +13,7 @@
 #include "nn/layer/Linear.hpp"
 #include "nn/layer/RMSNorm.hpp"
 #include "nn/layer/Attention.hpp"
+#include "nn/layer/Softmax.hpp"
 #include "nn/layer/ReZero.hpp"
 #include "nn/layer/FFN.hpp"
 #include "nn/ops/Activation.hpp"
@@ -100,6 +101,7 @@ int main(){
    .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4,64,true))
    .add<layer::RMSNorm>(8)
    .add<layer::FFN>(8)
+   .add<layer::Softmax>()
    ;
 
   m.random_init(gen);
