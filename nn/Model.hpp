@@ -74,6 +74,13 @@ public:
     }
   }
 
+  //何かリセットしたいとき呼び出す
+  void reset() override{
+    for(auto &l:layers_){
+      l->reset();
+    }
+  }
+
   //層の種類を返す。適切にオーバーライドすること
   std::string get_type() const override{
     return "Model";

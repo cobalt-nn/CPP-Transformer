@@ -100,6 +100,10 @@ struct Attention : ILayer{
       return max_length_;
     }
 
+    void reset(){
+      current_length_ = 0;
+    }
+
   private:
     tensor::Tensor K_;
     tensor::Tensor V_;
@@ -182,7 +186,7 @@ struct Attention : ILayer{
 
     static int64_t count = 0;
     if(count % 1024 == 0){
-      std::cout << "scores_mx" << mx << std::endl;
+      //std::cout << "scores_mx" << mx << std::endl;
       //std::cout << "scores" << scores_.to_string() << std::endl;
       //std::cout << "weights" << weights_.to_string() << std::endl;
     }
@@ -273,7 +277,7 @@ struct Attention : ILayer{
           }
         }
 
-        std::cout << "weights_view" << weights_view.to_string() << std::endl;
+        //std::cout << "weights_view" << weights_view.to_string() << std::endl;
       }
     }
   }
@@ -334,6 +338,12 @@ struct Attention : ILayer{
       std::fill(sum_weights_.begin(),sum_weights_.end(),0.0f);
       std::fill(max_weights_.begin(),max_weights_.end(),0.0f);
       std::fill(mask_col_ends_.begin(),mask_col_ends_.end(),scores_.dim(3));
+    }
+  }
+
+  void reset() override{
+    if(cache_){
+      cache_.value().reset();
     }
   }
 

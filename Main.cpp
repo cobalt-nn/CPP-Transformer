@@ -24,123 +24,101 @@
 
 #include "data/MNISTLoader.hpp"
 
+#include "TokenSystem.hpp"
+
 using namespace cobalt_715::nn;
 
-void set(tensor::Tensor &input,tensor::Tensor &output,std::mt19937 &gen){
-  std::fill(input.data(),input.data() + input.numel(),0.0f);
-  std::fill(output.data(),output.data() + output.numel(),0.0f);
+static std::mt19937 gen(0);
+static int64_t dim = 8;
+static TokenSystem ts(dim);
 
-  for(int batch = 0;batch < input.dim(0);batch++){
-    for(int i = 0;i < input.dim(1);i++){
-      uint32_t j = gen() % input.dim(2);
+std::string set_str(std::mt19937 &gen){
+  std::string s;
 
-      input.at({batch,i,j}) = 1.3f;
-      output.at({batch,input.dim(1) - 1 - i,j}) = 1.3f;
-    }
+  uint64_t n = gen() % 100;
+  uint64_t m = gen() % 100;
 
-    for(int i = 0;i < input.dim(1);i++){
-      for(int j = 0;j < input.dim(2);j++){
-        input.at({batch,i,j}) += 0.05f * (i - input.dim(1) / 2) + 0.005f * (j - input.dim(2) / 2);
-        output.at({batch,input.dim(1) - 1 - i,j}) += 0.05f * (i - input.dim(1) / 2) + 0.005f * (j - input.dim(2) / 2);
-      }
-    }
+  s += std::to_string(n) + "+" + std::to_string(m) + "=" + std::to_string(n + m);
+
+  return s;
+}
+
+void set_t(const std::string &str,tensor::Tensor &output){
+  if(output.dim(1) != str.size() || output.dim(2) != ts.to_size()){
+    output = tensor::Tensor({1,static_cast<int64_t>(str.size()),static_cast<int64_t>(ts.to_size())});
+  }else{
+    std::fill(output.data(),output.data() + output.numel(),0.0f);
   }
+
+  for(int64_t i = 0;i < output.dim(1) - 1;i++){
+    output.at({0,i,ts.char_to_index(str[i + 1])}) = 1.0f;
+  }
+
+  output.at({0,output.dim(1) - 1,output.dim(2) - 1}) = 1.0f;
 }
 
 int main(){
-  tensor::Tensor input({2,8,8});
-  tensor::Tensor output({2,8,8});
+  ts.random_init(gen);
 
-  /*tensor::Tensor input({2,3,4});
-  tensor::Tensor output({2,3,6});
+  tensor::Tensor output({1,1,1});
 
-  for(int i = 0;i < output.numel();i++){
-    output.data()[i] = i / 10.0f;
-  }
-
-  std::cout << "output" << output.to_string() << std::endl;
-
-  layer::Attention a(4,2,2,3);
-
-  std::cout << a.forward(input).to_string() << std::endl;
-  std::cout << a.backward(output).to_string() << std::endl;
-
-  return 0;*/
-
-  std::mt19937 gen(0);
-
-  set(input,output,gen);
-
-  /*std::cout << input.to_string() << std::endl;
-  std::cout << output.to_string() << std::endl;
-
-  set(input,output,gen);
-
-  std::cout << input.to_string() << std::endl;
-  std::cout << output.to_string() << std::endl;
-
-  set(input,output,gen);
-
-  std::cout << input.to_string() << std::endl;
-  std::cout << output.to_string() << std::endl;
-
-  set(input,output,gen);
-
-  std::cout << input.to_string() << std::endl;
-  std::cout << output.to_string() << std::endl;
-
-  return 0;*/
+  //int64_t in = static_cast<int64_t>(ts.to_size());
 
   Model m;
 
-  m.add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4,64,true))
-   .add<layer::RMSNorm>(8)
-   .add<layer::FFN>(8)
-   .add<layer::RMSNorm>(8)
-   .add<layer::ReZero>(8,8,std::make_unique<layer::Attention>(8,2,8,4,64,true))
-   .add<layer::RMSNorm>(8)
-   .add<layer::FFN>(8)
+  m.add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,16,std::make_unique<layer::Attention>(8,2,16,8,64,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::FFN>(dim)
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,16,std::make_unique<layer::Attention>(8,2,16,8,64,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::FFN>(dim)
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,16,std::make_unique<layer::Attention>(8,2,16,8,64,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::FFN>(dim,dim * 4,static_cast<int64_t>(ts.to_size()))
    .add<layer::Softmax>()
    ;
 
   m.random_init(gen);
 
-  for(int i = 0;i < 16;i++){
-    set(input,output,gen);
+  for(int64_t i = 0;i < 100000000;i++){
+    std::string str = set_str(gen);
 
-    auto &out = m.forward(input);
+    set_t(str,output);
 
-    if(i % 1024 == 0){
-      std::cout << "time: " << i << std::endl;
+    const auto in = ts.forward(str);
 
-      std::cout << "input" << input.to_string() << std::endl;
+    //std::cout in.to_string() << std::endl;
+    //std::cout << output.to_string() << std::endl;
 
-      std::cout << "out" << out.to_string() << std::endl;
+    const auto out = m.forward(in);
 
-      //std::cout << m.to_string() << std::endl;
+    const auto out2 = m.backward(out - output);
+
+    ts.step(out2,0.001f);
+
+    m.step(0.001f,1);
+
+    m.zero_grad();
+
+    //std::cout << "out\n" << out.to_string() << std::endl;
+
+    std::string out_str;
+
+    for(int64_t i = 0;i < out.dim(1);i++){
+      int64_t max_index = std::max_element(&out.at({0,i,0}),&out.at({0,i,0}) + out.dim(2)) -  &out.at({0,i,0});
+      //std::cout << max_index << std::endl;
+      out_str += ts.index_to_char(max_index);
     }
 
-    //m.backward(out - output);
-
-    if(i % 4 == 0){
-      m.step(0.001f / 8.0f,1);
-
-      m.zero_grad();
+    if(i % 128 == 0){
+      std::cout << "time" << i << std::endl;
+      std::cout << "input:" << str << std::endl;
+      std::cout << "out:" << out_str << "\n" << std::endl;
     }
   }
-
-  tensor::Tensor input2({1,16,8});
-  tensor::Tensor output2({1,16,8});
-
-  for(int64_t i = 0;i < 32;i++){
-    set(input2,output2,gen);
-
-    std::cout << "input2" << input2.to_string() << std::endl;
-    std::cout << "out\n" << m.forward(input2,false).to_string() << std::endl;
-  }
-
-  std::cout << "end" << std::endl;
 
   return 0;
 }

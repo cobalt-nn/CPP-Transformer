@@ -26,6 +26,9 @@ struct ILayer{
   //勾配をリセットする
   virtual void zero_grad() = 0;
 
+  //何かリセットしたいとき呼び出す
+  virtual void reset(){}
+
   //層の種類を返す。適切にオーバーライドすること
   virtual std::string get_type() const = 0;
 
