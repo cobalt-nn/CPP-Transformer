@@ -19,7 +19,7 @@ private:
   std::vector<std::unique_ptr<layer::ILayer>> layers_;
 
 public:
-  Model& add(std::unique_ptr<ILayer> l){
+  Model& add(std::unique_ptr<layer::ILayer> l){
     layers_.push_back(std::move(l));
 
     return *this;
@@ -87,7 +87,7 @@ public:
   }
 
   //文字列にしたいとき使う
-  std::string to_string() const{
+  std::string to_string() const override{
     std::string s;
 
     for(auto &l:layers_){

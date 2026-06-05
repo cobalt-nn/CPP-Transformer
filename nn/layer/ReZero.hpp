@@ -79,6 +79,10 @@ struct ReZero : ILayer{
     d_alpha_ = 0.0f;
   }
 
+  void reset(){
+    layer_->reset();
+  }
+
   std::string get_type() const override{
     return "ReZero";
   }

@@ -81,6 +81,10 @@ struct Attention : ILayer{
         }
       }
 
+      std::cout << "current_length_" << current_length_ << std::endl;
+      //std::cout << "cache k" << this_k_view.to_string() << std::endl;
+      //std::cout << "cache v" << this_v_view.to_string() << std::endl;
+
       current_length_ += k_view.rows();
     }
 
@@ -164,7 +168,7 @@ struct Attention : ILayer{
 
     forward_ensure_shape(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols());
 
-    compute_scores(big_q_view,big_k_view);
+    compute_scores(big_q_view,big_k_view,training);
 
     //std::cout << "scores" << scores_.to_string() << std::endl;
 
@@ -196,8 +200,14 @@ struct Attention : ILayer{
   }
 
   //QKt / √d
-  void compute_scores(const tensor::ConstMatrixView big_q_view,const tensor::ConstMatrixView big_k_view){
+  void compute_scores(const tensor::ConstMatrixView big_q_view,const tensor::ConstMatrixView big_k_view,bool training){
     const float rec_sqrt_d = 1.0f / std::sqrt(d_qk_);
+
+    tensor::Tensor small_q({big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_});
+    tensor::Tensor small_k({big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_});
+
+    tensor::MatrixView q_view = small_q.flatten_matrix_view();
+    tensor::MatrixView k_view = small_k.flatten_matrix_view();
 
     std::vector<int64_t> scores_dim = {0,0};
 
@@ -210,14 +220,14 @@ struct Attention : ILayer{
 
         tensor::MatrixView scores_view = scores_.as_matrix_view(scores_dim);
 
-        const tensor::ConstMatrixView q_view = big_q_view.block(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_,
+        const tensor::ConstMatrixView q_view1 = big_q_view.block(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_,
           batch * big_q_view.numel() / big_q_view.cols() / input_ptr_->dim(0),head * d_qk_);
 
-        const tensor::ConstMatrixView k_view = big_k_view.block(big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_,
+        const tensor::ConstMatrixView k_view1 = big_k_view.block(big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_,
           batch * big_k_view.numel() / big_k_view.cols() / input_ptr_->dim(0),head * d_qk_);
 
-        //const tensor::ConstMatrixView q_view = qkv_->unsafe_matrix_view(qkv_->dim(1),d_qk_,qkv_->dim(2),1,index + head * d_qk_);
-        //const tensor::ConstMatrixView k_view = qkv_->unsafe_matrix_view(qkv_->dim(1),d_qk_,qkv_->dim(2),1,index + head * d_qk_ + k_offset_);
+        apply_RoPE(q_view,q_view1,training);
+        apply_RoPE(k_view,k_view1,training);
 
         static int64_t count = 0;
         //if(count % 512 == 0){
@@ -232,6 +242,28 @@ struct Attention : ILayer{
         tensor::MatrixView::matmul_impl(rec_sqrt_d,q_view,k_view.t(),0,scores_view);
 
         //std::cout << "compute_scores end" << std::endl;
+      }
+    }
+  }
+
+  void apply_RoPE(tensor::MatrixView &q,const tensor::ConstMatrixView &base_q,bool training){
+    const int32_t base = 10000;
+
+    for(int64_t row = 0;row < q.rows();row++){
+      for(int64_t col = 0;col < q.cols();col += 2){
+        const int64_t pos = (cache_ && !training) ? cache_.value().get_current_len() - q.rows() + row:row;
+
+        const float theta = pos / std::pow(base,static_cast<float>(col) / q.cols());
+
+        const float x = base_q.at(row,col);
+        const float y = (col + 1 < q.cols()) ? base_q.at(row,col + 1):0.0f;
+
+        const float sin_theta = std::sin(theta);
+        const float cos_theta = std::cos(theta);
+
+        q.at(row,col) = x * cos_theta - y * sin_theta;
+
+        if(col + 1 < q.cols()) q.at(row,col + 1) = x * sin_theta + y * cos_theta;
       }
     }
   }
@@ -338,12 +370,6 @@ struct Attention : ILayer{
       std::fill(sum_weights_.begin(),sum_weights_.end(),0.0f);
       std::fill(max_weights_.begin(),max_weights_.end(),0.0f);
       std::fill(mask_col_ends_.begin(),mask_col_ends_.end(),scores_.dim(3));
-    }
-  }
-
-  void reset() override{
-    if(cache_){
-      cache_.value().reset();
     }
   }
 
@@ -466,6 +492,12 @@ for(int i = 0;i < dw_view.rows();i++){
 
     std::vector<int64_t> d_scores_dim = {0,0};
 
+    tensor::Tensor small_q({big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_});
+    tensor::Tensor small_k({big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_});
+
+    tensor::MatrixView q_view = small_q.flatten_matrix_view();
+    tensor::MatrixView k_view = small_k.flatten_matrix_view();
+
     for(int64_t batch = 0;batch < input_ptr_->shape()[0];batch++){
       d_scores_dim[0] = batch;
 
@@ -474,11 +506,14 @@ for(int i = 0;i < dw_view.rows();i++){
 
         tensor::MatrixView d_scores_view = d_scores_.as_matrix_view(d_scores_dim);
 
-        const tensor::ConstMatrixView q_view = big_q_view.block(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_,
+        const tensor::ConstMatrixView q_view1 = big_q_view.block(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_,
           batch * big_q_view.numel() / big_q_view.cols() / input_ptr_->dim(0),head * d_qk_);
 
-        const tensor::ConstMatrixView k_view = big_k_view.block(big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_,
+        const tensor::ConstMatrixView k_view1 = big_k_view.block(big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_,
           batch * big_k_view.numel() / big_k_view.cols() / input_ptr_->dim(0),head * d_qk_);
+
+        apply_RoPE(q_view,q_view1,true);
+        apply_RoPE(k_view,k_view1,true);
 
         tensor::MatrixView d_q_view = big_d_q_view.block(big_d_q_view.numel() / input_ptr_->dim(0) / big_d_q_view.cols(),d_qk_,
           batch * big_d_q_view.numel() / big_d_q_view.cols() / input_ptr_->dim(0),head * d_qk_);
@@ -489,6 +524,31 @@ for(int i = 0;i < dw_view.rows();i++){
           tensor::MatrixView::matmul_impl(rec_sqrt_d,d_scores_view.t(),q_view,0.0f,d_k_view);
 
           tensor::MatrixView::matmul_impl(rec_sqrt_d,d_scores_view,k_view,0.0f,d_q_view);
+
+          d_apply_RoPE(d_k_view);
+          d_apply_RoPE(d_q_view);
+      }
+    }
+  }
+
+  void d_apply_RoPE(tensor::MatrixView &matrix){
+    const int32_t base = 10000;
+
+    for(int64_t row = 0;row < matrix.rows();row++){
+      for(int64_t col = 0;col < matrix.cols();col += 2){
+        const int64_t pos = row;
+
+        const float theta = -pos / std::pow(base,static_cast<float>(col) / matrix.cols());
+
+        const float x = matrix.at(row,col);
+        const float y = (col + 1 < matrix.cols()) ? matrix.at(row,col + 1):0.0f;
+
+        const float sin_theta = std::sin(theta);
+        const float cos_theta = std::cos(theta);
+
+        matrix.at(row,col) = x * cos_theta - y * sin_theta;
+
+        if(col + 1 < matrix.cols()) matrix.at(row,col + 1) = x * sin_theta + y * cos_theta;
       }
     }
   }
@@ -522,6 +582,12 @@ for(int i = 0;i < dw_view.rows();i++){
 
   void zero_grad() override{
     qkv_linear_.zero_grad();
+  }
+
+  void reset() override{
+    if(cache_){
+      cache_.value().reset();
+    }
   }
 
   std::string get_type() const override{

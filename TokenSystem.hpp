@@ -39,11 +39,11 @@ struct TokenSystem{
       }
     }
 
-    for(int i = 0;i < output.dim(1);i++){
+    /*for(int i = 0;i < output.dim(1);i++){
       for(int j = 0;j < output.dim(2);j++){
         output.at({0,i,j}) += 0.05f * (i - output.dim(1) / 2);
       }
-    }
+    }*/
 
     return output;
   }

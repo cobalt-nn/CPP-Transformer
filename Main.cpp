@@ -67,15 +67,15 @@ int main(){
   Model m;
 
   m.add<layer::RMSNorm>(dim)
-   .add<layer::ReZero>(dim,16,std::make_unique<layer::Attention>(8,2,16,8,64,true))
+   .add<layer::ReZero>(dim,16,std::make_unique<layer::Attention>(8,2,16,8,128,true))
    .add<layer::RMSNorm>(dim)
    .add<layer::FFN>(dim)
    .add<layer::RMSNorm>(dim)
-   .add<layer::ReZero>(dim,16,std::make_unique<layer::Attention>(8,2,16,8,64,true))
+   .add<layer::ReZero>(dim,16,std::make_unique<layer::Attention>(8,2,16,8,128,true))
    .add<layer::RMSNorm>(dim)
    .add<layer::FFN>(dim)
    .add<layer::RMSNorm>(dim)
-   .add<layer::ReZero>(dim,16,std::make_unique<layer::Attention>(8,2,16,8,64,true))
+   .add<layer::ReZero>(dim,16,std::make_unique<layer::Attention>(8,2,16,8,128,true))
    .add<layer::RMSNorm>(dim)
    .add<layer::FFN>(dim,dim * 4,static_cast<int64_t>(ts.to_size()))
    .add<layer::Softmax>()
@@ -83,7 +83,8 @@ int main(){
 
   m.random_init(gen);
 
-  for(int64_t i = 0;i < 100000000;i++){
+  for(int64_t i = 0;i < 30000;i++){
+
     std::string str = set_str(gen);
 
     set_t(str,output);
@@ -99,7 +100,7 @@ int main(){
 
     ts.step(out2,0.001f);
 
-    m.step(0.001f,1);
+    m.step(0.0001f,1);
 
     m.zero_grad();
 
@@ -113,11 +114,46 @@ int main(){
       out_str += ts.index_to_char(max_index);
     }
 
-    if(i % 128 == 0){
+    if(i % 10000 == 0){
       std::cout << "time" << i << std::endl;
       std::cout << "input:" << str << std::endl;
       std::cout << "out:" << out_str << "\n" << std::endl;
     }
+  }
+
+  std::cout << "end" << std::endl;
+
+  while(true){
+    std::string in_str;
+    std::cin >> in_str;
+
+    std::string out_str;
+
+    std::cout << in_str << std::endl;
+
+    int64_t count = 0;
+
+    while(true){
+      const auto in = ts.forward(in_str);
+      const auto out = m.forward(in,false);
+
+      //std::cout << "in" << in.to_string() << std::endl;
+      //std::cout << "out" << out.to_string() << std::endl;
+
+      int64_t i = out.dim(1) - 1;
+
+      int64_t max_index = std::max_element(&out.at({0,i,0}),&out.at({0,i,0}) + out.dim(2)) -  &out.at({0,i,0});
+      //std::cout << max_index << std::endl;
+      in_str = ts.index_to_char(max_index);
+      std::cout << "in_str: " << in_str << std::endl;
+      out_str += in_str;
+      if(ts.index_to_char(max_index) == 'e'|| count > 32){
+        std::cout << "out_str: " << out_str << std::endl;
+        break;
+      }
+      count++;
+    }
+    m.reset();
   }
 
   return 0;
