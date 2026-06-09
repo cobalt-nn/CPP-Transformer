@@ -81,7 +81,7 @@ struct Attention : ILayer{
         }
       }
 
-      std::cout << "current_length_" << current_length_ << std::endl;
+      //std::cout << "current_length_" << current_length_ << std::endl;
       //std::cout << "cache k" << this_k_view.to_string() << std::endl;
       //std::cout << "cache v" << this_v_view.to_string() << std::endl;
 
