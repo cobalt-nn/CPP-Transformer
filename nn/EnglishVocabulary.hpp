@@ -11,31 +11,50 @@
 namespace cobalt_715::nn{
 
 struct EnglishVocabulary{
-  EnglishVocabulary(){
-    for(std::string s:symbol_){
-      prefix_.push_back(s);
-      suffix_.push_back(s);
-    }
-  }
-
   //stringをtokenに分解
-  std::vector<std::string> tokenize(const std::string& text) const{
+  std::vector<std::string> tokenize(const std::string_view text) const{
     std::vector<std::string> tokens;
-    std::string s;
 
-    std::stringstream ss(text);
+    size_t be = 0;
+    size_t next_be = 0;
+    size_t en = 0;
 
-    while(std::getline(ss,s,' ')){
+    while(be < text.size()){
+      std::string_view back_sym;
+
+      //symbol_で分割
+      for(size_t i = be;i < text.size();i++){
+        for(const std::string_view sym:symbol_){
+          const std::string_view view = text.substr(i,sym.size());
+
+          if(view == sym){
+            en = i;
+            next_be = en + sym.size();
+            back_sym = sym;
+            //std::cout << "\nen" << en << "\nnext_be" << next_be << "\n" << std::endl;
+
+            goto hell;
+          }
+        }
+        next_be = en = text.size();
+      }
+
+      hell:
+
+      std::string base(text.substr(be,en - be));
+
+      std::string_view sv = base;
+
       {
-        bool start = std::isupper(static_cast<unsigned char>(s[0]));
+        bool start = std::isupper(static_cast<unsigned char>(base[0]));
         size_t upper = 0;
         size_t alpha = 0;
 
-        for(char &cr:s){
-          if(std::isalpha(cr)){
+        for(char &cr:base){
+          if(std::isalpha(static_cast<unsigned char>(cr))){
             alpha++;
 
-            if(std::isupper(cr)){
+            if(std::isupper(static_cast<unsigned char>(cr))){
               upper++;
             }
           }
@@ -50,55 +69,41 @@ struct EnglishVocabulary{
         }
       }
 
-      //全て小文字とする
-      std::transform(
-        s.begin(), 
-        s.end(), 
-        s.begin(),
-        [](unsigned char c){return std::tolower(c);}
-      );
-
-      //小さい文字はほぼそのまま追加
-      if(s.size() < 6){
-        tokens.push_back(s);
-        tokens.push_back(" ");
-        continue;
-      }
-
-      //接頭辞で分割する
-      for(const std::string &fix:prefix_){
-        if(s.starts_with(fix)){
-          tokens.push_back(fix);
-
-          s = s.substr(fix.size());
-
+      //prefix
+      for(const std::string_view pre:prefix_){
+        if(sv.starts_with(pre)){
+          tokens.push_back(std::string(pre));
+          sv.remove_prefix(pre.size());
           break;
         }
       }
 
-      std::string suf;
+      std::string suffix;
 
-      //接尾辞で分割する
-      for(const std::string &fix:suffix_){
-        if(s.ends_with(fix)){
-          suf = fix;
-
-          s = s.substr(0,s.size() - fix.size());
-
+      //suffix
+      for(const std::string_view suf:suffix_){
+        if(sv.ends_with(suf)){
+          suffix = std::string(suf);
+          sv.remove_suffix(suf.size());
           break;
         }
       }
 
-      tokens.push_back(s);
-
-      if(!suf.empty()){
-        tokens.push_back(suf);
+      if(!sv.empty()){
+        tokens.push_back(std::string(sv));
       }
 
-      tokens.push_back(" ");
+      if(!suffix.empty()){
+        tokens.push_back(std::string(suffix));
+      }
+
+      if(!back_sym.empty()){
+        tokens.push_back(std::string(back_sym));
+      }
+
+      be = next_be;
     }
 
-    tokens.pop_back();//最後のスペースを削除する
     return tokens;
   }
 
@@ -108,7 +113,18 @@ private:
   const std::string ALL_CAP_ = "<ALL_CAP>";//すべて大文字かどうか
 
   std::vector<std::string> symbol_ = {
+    "'ll",
+    "'re",
+    "'ve",
+    "<<=",
+    "===",
+    ">>=",
+    "n't",
     "%=",
+    "'d",
+    "'m",
+    "'s",
+    "'t",
     "*=",
     "++",
     "+=",
@@ -118,6 +134,8 @@ private:
     "<<",
     "==",
     ">>",
+    "s'",
+    " ",
     "!",
     "\"",
     "#",
@@ -240,8 +258,7 @@ private:
     "ob",
     "re",
     "un",
-    "up",
-    "a"
+    "up"
   };
 
   //suffix
@@ -400,7 +417,6 @@ private:
     "ule",
     "ure",
     "yer",
-    "'s",
     "al",
     "an",
     "ar",
@@ -420,7 +436,6 @@ private:
     "ly",
     "or",
     "ry",
-    "s'",
     "se",
     "th",
     "ty",

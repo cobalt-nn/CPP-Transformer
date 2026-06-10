@@ -38,5 +38,8 @@ int main(){
     std::cout << str << std::endl;
   }
 
+  std::cout << "end" << std::endl;
+
+
   return 0;
 }
