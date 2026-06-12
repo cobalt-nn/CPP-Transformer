@@ -20,7 +20,7 @@ struct EnglishVocabulary{
     size_t en = 0;
 
     while(be < text.size()){
-      std::string_view back_sym;
+      std::string back_sym;
 
       //symbol_で分割
       for(size_t i = be;i < text.size();i++){
@@ -30,7 +30,7 @@ struct EnglishVocabulary{
           if(view == sym){
             en = i;
             next_be = en + sym.size();
-            back_sym = sym;
+            back_sym = std::string(sym);
             //std::cout << "\nen" << en << "\nnext_be" << next_be << "\n" << std::endl;
 
             goto hell;
@@ -98,7 +98,15 @@ struct EnglishVocabulary{
       }
 
       if(!back_sym.empty()){
-        tokens.push_back(std::string(back_sym));
+        bool cap = false;
+        for(char &cr:back_sym){
+          if(std::isupper(static_cast<unsigned char>(cr))) cap = true;
+          cr = std::tolower(static_cast<unsigned char>(cr));
+        }
+
+        if(cap) tokens.push_back(ALL_CAP_);
+
+        tokens.push_back(back_sym);
       }
 
       be = next_be;
@@ -114,17 +122,25 @@ private:
 
   std::vector<std::string> symbol_ = {
     "'ll",
+    "'LL",
     "'re",
+    "'RE",
     "'ve",
+    "'VE",
     "<<=",
     "===",
     ">>=",
     "n't",
+    "N'T",
     "%=",
     "'d",
+    "'D",
     "'m",
+    "'M",
     "'s",
+    "'S",
     "'t",
+    "'T",
     "*=",
     "++",
     "+=",
@@ -135,6 +151,7 @@ private:
     "==",
     ">>",
     "s'",
+    "S'",
     " ",
     "!",
     "\"",
