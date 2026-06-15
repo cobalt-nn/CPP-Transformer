@@ -3,23 +3,32 @@
 //#include <iostream>
 #include <string>
 #include <random>
+#include "ILayer.hpp"
+#include "Linear.hpp"
+#include "Identity.hpp"
 #include "nlohmann/json.hpp"
 #include "nn/tensor/Tensor.hpp"
 
 namespace cobalt_715::nn::layer{
 
 struct ReZero : ILayer{
-  ReZero(int64_t in,int64_t layer_out,std::unique_ptr<ILayer> layer)
-    : layer_(std::move(layer)),
-      WO_(layer_out,in),
+  ReZero(int64_t in,int64_t body_out,std::unique_ptr<ILayer> body)
+    : ReZero(std::move(body),std::make_unique<Linear>(body_out,in)){}
+
+  ReZero(std::unique_ptr<ILayer> body)
+    : ReZero(std::move(body),std::make_unique<Identity>()){}
+
+  ReZero(std::unique_ptr<ILayer> body,std::unique_ptr<ILayer> projection)
+    : body_(std::move(body)),
+      projection_(std::move(projection)),
       output_({1}),
       grad_({1}){}
 
-  std::unique_ptr<ILayer> layer_;
+  std::unique_ptr<ILayer> body_;
 
-  Linear WO_;
+  std::unique_ptr<ILayer> projection_;
 
-  const tensor::Tensor *WO_output_ptr_;
+  const tensor::Tensor *pr_output_ptr_;
 
   tensor::Tensor output_;
   tensor::Tensor grad_;
@@ -28,7 +37,7 @@ struct ReZero : ILayer{
   float d_alpha_ = 0.0f;
 
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
-    WO_output_ptr_ = &WO_.forward(layer_->forward(input,training),training);
+    pr_output_ptr_ = &projection_->forward(body_->forward(input,training),training);
 
     if(output_.shape() != input.shape()){
       output_ = tensor::Tensor(input.shape());
@@ -36,7 +45,7 @@ struct ReZero : ILayer{
       std::fill(output_.data(),output_.data() + output_.numel(),0.0f);
     }
 
-    tensor::Tensor::scale(*WO_output_ptr_,alpha_,output_);
+    tensor::Tensor::scale(*pr_output_ptr_,alpha_,output_);
 
     output_ += input;
 
@@ -50,22 +59,22 @@ struct ReZero : ILayer{
       std::fill(grad_.data(),grad_.data() + grad_.numel(),0.0f);
     }
 
-    tensor::Tensor::scale(layer_->backward(WO_.backward(grad_output)),alpha_,grad_);
+    tensor::Tensor::scale(grad_output,alpha_,grad_);//grad_ = grad_output * alpha_
+
+    const auto &g = body_->backward(projection_->backward(grad_));
+
+    tensor::Tensor::add(grad_output,g,grad_);//grad_ = grad_output + g
 
     for(size_t i = 0;i < grad_output.numel();i++){
-      grad_.data()[i] += grad_output.data()[i];
-    }
-
-    for(size_t i = 0;i < grad_output.numel();i++){
-      d_alpha_ += WO_output_ptr_->data()[i] * grad_output.data()[i];
+      d_alpha_ += pr_output_ptr_->data()[i] * grad_output.data()[i];
     }
 
     return grad_;
   }
 
   void step(float lr,int batch_size=64) override{
-    WO_.step(lr,batch_size);
-    layer_->step(lr,batch_size);
+    projection_->step(lr,batch_size);
+    body_->step(lr,batch_size);
 
     alpha_ -= d_alpha_ * lr;
 
@@ -73,14 +82,15 @@ struct ReZero : ILayer{
   }
 
   void zero_grad() override{
-    WO_.zero_grad();
-    layer_->zero_grad();
+    projection_->zero_grad();
+    body_->zero_grad();
 
     d_alpha_ = 0.0f;
   }
 
-  void reset(){
-    layer_->reset();
+  void reset() override{
+    projection_->reset();
+    body_->reset();
   }
 
   std::string get_type() const override{
@@ -88,8 +98,9 @@ struct ReZero : ILayer{
   }
 
   std::string to_string() const override{
-    std::string s = get_type() + "\n" + WO_.to_string() + "\n";
-    s += layer_->to_string();
+    std::string s = get_type() + "\n";
+    s += body_->to_string() + "\n";
+    s += projection_->to_string();
     return s;
   }
 
@@ -100,8 +111,8 @@ struct ReZero : ILayer{
 
   //ランダム初期化する
   void random_init(std::mt19937 &gen) override{
-    WO_.random_init(gen);
-    layer_->random_init(gen);
+    projection_->random_init(gen);
+    body_->random_init(gen);
   }
 };
 
