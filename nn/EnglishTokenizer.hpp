@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <cctype>
 #include <algorithm>
+#include "SpecialToken.hpp"
 
 namespace cobalt_715::nn{
 
@@ -63,9 +64,9 @@ struct EnglishTokenizer{
         }
 
         if(alpha > 0 && upper == alpha){
-          tokens.push_back(ALL_CAP_);
+          tokens.push_back(token::ALL_CAP);
         }else if(start){
-          tokens.push_back(CAP_);
+          tokens.push_back(token::CAP);
         }
       }
 
@@ -108,7 +109,7 @@ struct EnglishTokenizer{
           cr = std::tolower(static_cast<unsigned char>(cr));
         }
 
-        if(cap) tokens.push_back(ALL_CAP_);
+        if(cap) tokens.push_back(token::ALL_CAP);
 
         tokens.push_back(back_sym);
       }
@@ -129,10 +130,10 @@ struct EnglishTokenizer{
     for(std::string s:tokens){
       symbol = false;
 
-      if(s == CAP_){
+      if(s == token::CAP){
         cap = true;
         continue;
-      }else if(s == ALL_CAP_){
+      }else if(s == token::ALL_CAP){
         all_cap = true;
         continue;
       }
@@ -171,10 +172,6 @@ struct EnglishTokenizer{
   }
 
 private:
-
-  const std::string CAP_ = "<CAP>";//先頭が大文字かどうか
-  const std::string ALL_CAP_ = "<ALL_CAP>";//すべて大文字かどうか
-
   std::vector<std::string> symbol_ = {
     "'ll",
     "'LL",
