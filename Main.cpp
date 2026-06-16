@@ -31,20 +31,26 @@
 using namespace cobalt_715::nn;
 
 int main(){
-  /*EnglishTokenizer ev;
+  EnglishTokenizer ev;
 
   std::string s;
 
+  //I'LL be back.TRANSFORMER Attention Is All You Need
+
   std::getline(std::cin,s);
 
-  for(const std::string_view str:ev.tokenize(s)){
+  auto tokens = ev.tokenize(s);
+
+  for(const std::string_view str:tokens){
     std::cout << str << std::endl;
   }
+
+  std::cout << ev.detokenize(tokens) << std::endl;
 
   std::cout << "end" << std::endl;
 
 
-  return 0;*/
+  return 0;
 
   Model m;
 

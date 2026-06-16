@@ -10,7 +10,7 @@
 
 namespace cobalt_715::nn{
 
-struct EnglishVocabulary{
+struct EnglishTokenizer{
   //stringをtokenに分解
   std::vector<std::string> tokenize(const std::string_view text) const{
     std::vector<std::string> tokens;
@@ -69,6 +69,10 @@ struct EnglishVocabulary{
         }
       }
 
+      std::string suffix;
+
+      if(sv.size() < 6) goto hell2;
+
       //prefix
       for(const std::string_view pre:prefix_){
         if(sv.starts_with(pre)){
@@ -78,8 +82,6 @@ struct EnglishVocabulary{
         }
       }
 
-      std::string suffix;
-
       //suffix
       for(const std::string_view suf:suffix_){
         if(sv.ends_with(suf)){
@@ -88,6 +90,8 @@ struct EnglishVocabulary{
           break;
         }
       }
+
+      hell2:
 
       if(!sv.empty()){
         tokens.push_back(std::string(sv));
@@ -113,6 +117,57 @@ struct EnglishVocabulary{
     }
 
     return tokens;
+  }
+
+  std::string detokenize(const std::vector<std::string> &tokens) const{
+    std::string text;
+    bool cap = false;
+    bool all_cap = false;
+    bool symbol = false;
+    int64_t all_cap_count = 0;
+
+    for(std::string s:tokens){
+      symbol = false;
+
+      if(s == CAP_){
+        cap = true;
+        continue;
+      }else if(s == ALL_CAP_){
+        all_cap = true;
+        continue;
+      }
+
+      for(const std::string &sym:symbol_){
+        if(s == sym){
+          symbol = true;
+          if(all_cap_count > 1){
+            all_cap = false;
+          }
+          break;
+        }
+      }
+
+      if(cap){
+        s[0] = std::toupper(static_cast<unsigned char>(s[0]));
+         cap = false;
+      }else if(all_cap){
+        std::transform(
+          s.begin(), 
+          s.end(), 
+          s.begin(),
+          [](char c) {return std::toupper(static_cast<unsigned char>(c));}
+        );
+
+        if(symbol){
+          all_cap = false;
+          all_cap_count = 0;
+        }else{
+          all_cap_count++;
+        }
+      }
+      text += s;
+    }
+    return text;
   }
 
 private:
