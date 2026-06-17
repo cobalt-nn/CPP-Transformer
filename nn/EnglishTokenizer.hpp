@@ -12,6 +12,32 @@
 namespace cobalt_715::nn{
 
 struct EnglishTokenizer{
+  std::vector<std::string> format(const std::string_view text,const int64_t max_len,bool end_eos = false) const{
+    std::vector<std::string> tokens = {token::BOS};
+
+    std::vector<std::string> t = tokenize(text);
+
+    bool add_eos = false;
+
+    for(int64_t i = 0;i + 1 < max_len;i++){
+      if(i < t.size()){
+        if(end_eos && i + 2 == max_len){
+          tokens.push_back(token::EOS);
+          add_eos = true;
+        }else{
+          tokens.push_back(t[i]);
+        }
+      }else if(!add_eos){
+        tokens.push_back(token::EOS);
+        add_eos = true;
+      }else{
+        tokens.push_back(token::PAD);
+      }
+    }
+
+    return tokens;
+  }
+
   //stringをtokenに分解
   std::vector<std::string> tokenize(const std::string_view text) const{
     std::vector<std::string> tokens;
@@ -141,7 +167,7 @@ struct EnglishTokenizer{
       for(const std::string &sym:symbol_){
         if(s == sym){
           symbol = true;
-          if(all_cap_count > 1){
+          if(all_cap_count > 0){
             all_cap = false;
           }
           break;
@@ -172,7 +198,7 @@ struct EnglishTokenizer{
   }
 
 private:
-  std::vector<std::string> symbol_ = {
+  inline static const std::vector<std::string> symbol_ = {
     "'ll",
     "'LL",
     "'re",
@@ -251,7 +277,7 @@ private:
 
   //prefix
   //https://tanzam-dict.net/ja/en/articles/prefixes-in-english参考
-  std::vector<std::string> prefix_ = {
+  inline static const std::vector<std::string> prefix_ = {
     "counter",
     "circum",
     "contra",
@@ -332,7 +358,7 @@ private:
 
   //suffix
   //https://mage8.com/tango/column8.html参考
-  std::vector<std::string> suffix_ = {
+  inline static const std::vector<std::string> suffix_ = {
     "fication",
     "ability",
     "ibility",

@@ -25,32 +25,57 @@
 
 #include "nn/Model.hpp"
 #include "nn/EnglishTokenizer.hpp"
+#include "nn/Vocabulary.hpp"
+#include "nn/Embedding.hpp"
 
 #include "data/MNISTLoader.hpp"
 
 using namespace cobalt_715::nn;
 
 int main(){
-  EnglishTokenizer ev;
+  const std::string case1 = "1:I'll be back.";
+  const std::string case2 = "2:attention is all you need";
+  const std::string case3 = "3:I have a pen.";
+  const std::string case4 = "4:I have an apple";
 
-  std::string s;
+  EnglishTokenizer et;
 
-  //I'LL be back.TRANSFORMER Attention Is All You Need
-
-  std::getline(std::cin,s);
-
-  auto tokens = ev.tokenize(s);
-
-  for(const std::string_view str:tokens){
-    std::cout << str << std::endl;
+  /*for(const std::string &s:et.tokenize(case1)){
+    std::cout << s << std::endl;
   }
 
-  std::cout << ev.detokenize(tokens) << std::endl;
+  std::cout << et.detokenize(et.tokenize(case1)) << std::endl;
 
-  std::cout << "end" << std::endl;
+  return 0;*/
 
+  Vocabulary voc;
 
-  return 0;
+  voc.add(et.tokenize(case1 + case2 + case3 + case4));
+
+  //std::cout << voc.to_string() << std::endl;
+
+  std::vector<std::vector<int64_t>> ids = {
+    {voc.stoi(et.format(case1,16))},
+    {voc.stoi(et.format(case2,16))},
+    {voc.stoi(et.format(case3,16))},
+    {voc.stoi(et.format(case4,16))},
+  };
+
+  tensor::Tensor target({4,16,voc.size()});
+
+  for(int64_t i = 0;i < target.dim(0);i++){
+    for(int64_t j = 0;j < target.dim(1);j++){
+      if(j + 1 == target.dim(1)){
+        target.at({i,j,0}) = 1.0f;
+      }else{
+        target.at({i,j,ids.at(i).at(j + 1)}) = 1.0f;
+      }
+    }
+  }
+
+  //std::cout << target.to_string() << std::endl;
+
+  Embedding em(voc.size(),32);
 
   Model m;
 
@@ -65,38 +90,37 @@ int main(){
    .add<layer::RMSNorm>(32)
    .add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,64,true))
    .add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(std::make_unique<layer::FFN>(32))
-   .add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,64,true))
-   .add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(std::make_unique<layer::FFN>(32));
+   .add<layer::FFN>(32,32*4,voc.size())
+   .add<layer::Softmax>();
 
-  tensor::Tensor input = tensor::Tensor({4,64,32});
-  tensor::Tensor output = tensor::Tensor({4,64,32});
+  std::mt19937 gen(0);
 
-  auto start = std::chrono::system_clock::now();
+  em.random_init(gen);
+  m.random_init(gen);
 
-  m.backward(m.forward(input) - output);
+  const float lr = 0.001f;
 
-  auto end = std::chrono::system_clock::now();
+  for(int64_t i = 0;i < 1000;i++){
+    const tensor::Tensor &em_out = em.forward(ids);
+    const tensor::Tensor &m_out = m.forward(em_out);
 
-  std::cout << end - start << std::endl;
+    em.backward(m.backward(m_out - target));
 
+    std::cout << "time:" << i << " ------------------------------" << std::endl;
 
-  auto start1 = std::chrono::system_clock::now();
+    for(int64_t batch = 0;batch < m_out.dim(0);batch++){
+      std::vector<int64_t> id;
+      for(int64_t row = 0;row < m_out.dim(1);row++){
+        id.push_back(std::max_element(&m_out.data()[batch * m_out.stride()[0] + row * m_out.stride()[1]],&m_out.data()[batch * m_out.stride()[0] + (row + 1) * m_out.stride()[1]]) - &m_out.data()[batch * m_out.stride()[0] + row * m_out.stride()[1]]);
+      }
 
-  m.backward(m.forward(input) - output);
+      std::cout << et.detokenize(voc.itos(id)) << std::endl;
+    }
 
-  auto end1 = std::chrono::system_clock::now();
+    em.step(lr,4);
+    m.step(lr,4);
 
-  std::cout << end1 - start1 << std::endl;
-
-
-  start1 = std::chrono::system_clock::now();
-
-  m.backward(m.forward(input) - output);
-
-  end1 = std::chrono::system_clock::now();
-
-  std::cout << end1 - start1 << std::endl;
+    em.zero_grad();
+    m.zero_grad();
+  }
 }
