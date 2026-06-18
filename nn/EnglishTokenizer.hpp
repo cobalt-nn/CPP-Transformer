@@ -205,6 +205,15 @@ struct EnglishTokenizer{
 
 private:
   inline static const std::vector<std::string> symbol_ = {
+    token::PAD,
+    token::UNK,
+    token::BOS,
+    token::EOS,
+    token::CAP,
+    token::ALL_CAP,
+    token::USER,
+    token::ASSISTANT,
+    token::SYSTEM,
     "'ll",
     "'LL",
     "'re",
