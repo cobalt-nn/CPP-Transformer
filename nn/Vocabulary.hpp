@@ -3,8 +3,10 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <random>
 #include <unordered_map>
 #include "SpecialToken.hpp"
+#include "tensor/Tensor.hpp"
 
 namespace cobalt_715::nn{
 
@@ -62,6 +64,51 @@ struct Vocabulary{
     }
 
     return ids;
+  }
+
+  std::vector<std::vector<int64_t>> argmax(const tensor::Tensor &t){
+    if(t.rank() != 3) throw std::runtime_error("Vocabulary::argmax");
+
+    std::vector<std::vector<int64_t>> idss;
+
+    for(int64_t batch = 0;batch < t.dim(0);batch++){
+      std::vector<int64_t> ids;
+      for(int64_t row = 0;row < t.dim(1);row++){
+        const auto max = std::max_element(&t.data()[batch * t.stride()[0] + row * t.stride()[1]],&t.data()[batch * t.stride()[0] + (row + 1) * t.stride()[1]]);
+        ids.push_back(max - &t.data()[batch * t.stride()[0] + row * t.stride()[1]]);
+      }
+      idss.push_back(ids);
+    }
+
+    return idss;
+  }
+
+  std::vector<std::vector<int64_t>> sample(const tensor::Tensor &t,std::mt19937 &gen){
+    if(t.rank() != 3) throw std::runtime_error("Vocabulary::sample");
+
+    std::uniform_real_distribution<double> dist(0.0,1.0);
+
+    std::vector<std::vector<int64_t>> idss;
+
+    for(int64_t batch = 0;batch < t.dim(0);batch++){
+      std::vector<int64_t> ids;
+      for(int64_t row = 0;row < t.dim(1);row++){
+        double r = dist(gen);
+        double sum = 0.0;
+        int64_t selected = t.dim(2) - 1;
+        for(int64_t col = 0;col < t.dim(2);col++){
+          sum += t.at({batch,row,col});
+          if(sum >= r){
+            selected = col;
+            break;
+          }
+        }
+        ids.push_back(selected);
+      }
+      idss.push_back(ids);
+    }
+
+    return idss;
   }
 
 private:

@@ -11,6 +11,9 @@ inline constexpr std::string BOS = "<BOS>";
 inline constexpr std::string EOS = "<EOS>";
 inline constexpr std::string CAP = "<CAP>";//先頭が大文字かどうか
 inline constexpr std::string ALL_CAP = "<ALL_CAP>";//すべて大文字かどうか
+inline constexpr std::string USER = "USER>";
+inline constexpr std::string ASSISTANT = "<ASSISTANT>";
+inline constexpr std::string SYSTEM = "<SYSTEM>";
 
 inline const std::vector<std::string> stokens =
   {
@@ -19,7 +22,10 @@ inline const std::vector<std::string> stokens =
     BOS,
     EOS,
     CAP,
-    ALL_CAP
+    ALL_CAP,
+    USER,
+    ASSISTANT,
+    SYSTEM
   };
 
 }//namespace cobalt_715::nn::token

@@ -28,6 +28,7 @@
 #include "nn/EnglishTokenizer.hpp"
 #include "nn/Vocabulary.hpp"
 #include "nn/Embedding.hpp"
+#include "nn/SpecialToken.hpp"
 
 #include "data/MNISTLoader.hpp"
 
@@ -86,18 +87,20 @@ int main(){
 
   Embedding em(voc.size(),32);
 
+  const int64_t cache_len = 64;
+
   Model m;
 
   m.add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,64,true))
+   .add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,cache_len,true))
    .add<layer::RMSNorm>(32)
    .add<layer::ReZero>(std::make_unique<layer::FFN>(32))
-   //.add<layer::RMSNorm>(32)
-   //.add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,64,true))
-   //.add<layer::RMSNorm>(32)
-   //.add<layer::ReZero>(std::make_unique<layer::FFN>(32))
    .add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,64,true))
+   .add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,cache_len,true))
+   .add<layer::RMSNorm>(32)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(32))
+   .add<layer::RMSNorm>(32)
+   .add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,cache_len,true))
    .add<layer::RMSNorm>(32)
    .add<layer::FFN>(32,32*4,voc.size())
    .add<layer::Softmax>();
@@ -109,7 +112,7 @@ int main(){
 
   const float lr = 0.001f;
 
-  for(int64_t i = 0;i < 70;i++){
+  for(int64_t i = 0;i < 1000;i++){
     const tensor::Tensor &em_out = em.forward(ids);
     const tensor::Tensor &m_out = m.forward(em_out);
 
@@ -121,15 +124,15 @@ int main(){
     float conf = 0.0f;
 
     for(int64_t batch = 0;batch < m_out.dim(0);batch++){
-      std::vector<int64_t> id;
       for(int64_t row = 0;row < m_out.dim(1);row++){
         auto max = std::max_element(&m_out.data()[batch * m_out.stride()[0] + row * m_out.stride()[1]],&m_out.data()[batch * m_out.stride()[0] + (row + 1) * m_out.stride()[1]]);
         loss -= log(m_out.at({batch,row,(row + 1 < ids.at(0).size()) ? ids.at(batch).at(row + 1):0}));
-        id.push_back(max - &m_out.data()[batch * m_out.stride()[0] + row * m_out.stride()[1]]);
         conf += *max;
       }
+    }
 
-      std::cout << et.detokenize(voc.itos(id)) << std::endl;
+    for(const auto &ve:voc.argmax(m_out)){
+      std::cout << et.detokenize(voc.itos(ve)) << std::endl;
     }
 
     std::cout << "loss:" << loss / m_out.dim(0) / m_out.dim(1) << std::endl;
@@ -142,6 +145,8 @@ int main(){
     m.zero_grad();
   }
 
+  std::uniform_real_distribution<float> dist(0.0f,1.0f);
+
   while(true){
     std::cout << "--------------------------------------------------" << std::endl;
 
@@ -149,6 +154,45 @@ int main(){
 
     std::getline(std::cin,text);
 
-    std::cout << text << std::endl;
+    std::vector<std::string> tokens = et.format(text,text.size() * 2 + 10,false,false);
+
+    tokens.pop_back();
+    tokens.push_back(token::ASSISTANT);
+
+    //std::cout << text << std::endl;
+
+    //for(auto s:tokens) std::cout << "1234567890 " << s << std::endl;
+
+    std::vector<std::vector<int64_t>> id = {voc.stoi(tokens)};
+
+    const tensor::Tensor *out = &m.forward(em.forward(id,false),false);
+
+    //std::cout << out->to_string() << std::endl;
+
+    int64_t len = out->dim(1);
+
+    std::vector<std::string> tok;
+
+    while(len < cache_len){
+      const int64_t id1 = voc.sample(*out,gen).at(0).at(out->dim(1) - 1);
+
+      tok.push_back(voc.itos({id1}).at(0));
+
+      if(voc.itos({id1}).at(0) == token::EOS) break;
+
+      out = &m.forward(em.forward({{id1}},false),false);
+
+      len++;
+    }
+
+    /*for(const std::string &str:tok){
+      std::cout << str << std::endl;
+    }*/
+
+    std::cout << et.detokenize(tok) << std::endl;
+
+    m.reset();
   }
+
+  return 0;
 }

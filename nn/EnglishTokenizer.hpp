@@ -12,7 +12,7 @@
 namespace cobalt_715::nn{
 
 struct EnglishTokenizer{
-  std::vector<std::string> format(const std::string_view text,const int64_t max_len,bool end_eos = false) const{
+  std::vector<std::string> format(const std::string_view text,const int64_t max_len,bool end_eos=false,const bool add_pad=true) const{
     std::vector<std::string> tokens = {token::BOS};
 
     std::vector<std::string> t = tokenize(text);
@@ -30,7 +30,7 @@ struct EnglishTokenizer{
       }else if(!add_eos){
         tokens.push_back(token::EOS);
         add_eos = true;
-      }else{
+      }else if(add_pad){
         tokens.push_back(token::PAD);
       }
     }
