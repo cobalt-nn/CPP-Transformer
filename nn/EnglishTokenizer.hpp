@@ -89,7 +89,7 @@ struct EnglishTokenizer{
           cr = std::tolower(static_cast<unsigned char>(cr));
         }
 
-        if(alpha > 0 && upper == alpha){
+        if(alpha > 0 && upper == alpha && base.size() != 1){
           tokens.push_back(token::ALL_CAP);
         }else if(start){
           tokens.push_back(token::CAP);
@@ -173,6 +173,12 @@ struct EnglishTokenizer{
           break;
         }
       }
+
+      bool is_special = false;
+      for(const std::string &ss:token::stokens){
+        if(s == ss) is_special = true;
+      }
+      if(is_special) continue;
 
       if(cap){
         s[0] = std::toupper(static_cast<unsigned char>(s[0]));

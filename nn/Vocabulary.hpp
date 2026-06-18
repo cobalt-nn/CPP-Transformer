@@ -53,7 +53,12 @@ struct Vocabulary{
     ids.reserve(tokens.size());
 
     for(const std::string &s:tokens){
-      ids.push_back(stoi_.at(s));
+      const auto it = stoi_.find(s);
+      if(it == stoi_.end()){
+        ids.push_back(stoi_.at(token::UNK));
+      }else{
+        ids.push_back(it->second);
+      }
     }
 
     return ids;
