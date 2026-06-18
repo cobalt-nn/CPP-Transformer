@@ -35,11 +35,11 @@
 using namespace cobalt_715::nn;
 
 int main(){
-  const std::string case1 = "What food do you like?" + token::ASSISTANT;
-  const std::string case1_1 = "I like apple.";
-  const std::string case1_2 = "I like pineapple.";
-  const std::string case1_3 = "I like banana.";
-  const std::string case1_4 = "I like orange.";
+  const std::string case1 = "What food do you love?" + token::ASSISTANT;
+  const std::string case1_1 = "I love apple the best.";
+  const std::string case1_2 = "I love pineapple the best.";
+  const std::string case1_3 = "I love banana the best.";
+  const std::string case1_4 = "I love orange the best.";
 
   const std::string case01_1 = "apple is food.";
   const std::string case01_2 = "pineapple is food.";
@@ -82,11 +82,11 @@ int main(){
 
   EnglishTokenizer et;
 
-  /*for(const std::string &s:et.format(case03_4,32)){
+  /*for(const std::string &s:et.format(case1 + case1_1,32)){
     std::cout << s << std::endl;
   }
 
-  std::cout << et.detokenize(et.format(case03_4,32)) << std::endl;
+  std::cout << et.detokenize(et.format(case1 + case1_1,32)) << std::endl;
 
   return 0;*/
 
@@ -101,6 +101,8 @@ int main(){
   voc.add(et.tokenize(case1_1 + case1_1 + case1_3 + case1_4));
   voc.add(et.tokenize(case3_1 + case3_1 + case3_3 + case3_4));
   voc.add(et.tokenize(case5_1 + case5_1 + case5_3 + case5_4));
+
+  voc.add(et.tokenize("I'll be back python transformer attention is all you need"));
 
   //std::cout << voc.to_string() << std::endl;
 
@@ -191,7 +193,7 @@ int main(){
 
   const float lr = 0.001f;
 
-  for(int64_t i = 0;i < 2000;i++){
+  for(int64_t i = 0;i < 5000;i++){
     const size_t ba = gen() % idss.size();
 
     tensor::Tensor target({static_cast<int64_t>(idss.at(ba).size()),static_cast<int64_t>(idss.at(ba).at(0).size()),voc.size()});
