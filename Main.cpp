@@ -34,51 +34,178 @@
 
 using namespace cobalt_715::nn;
 
+  static const std::vector<std::string> q = {
+    "What food do you ",
+    "What language do you ",
+    "What animal do you ",
+    "What NN do you "
+  };
+
+  static const std::vector<std::string> llh = {
+    "like",
+    "love",
+    "have"
+  };
+
+  static const std::vector<std::string> food = {
+    "apple",
+    "banana",
+    "orange",
+    "pineapple"
+  };
+
+  static const std::vector<std::string> lang = {
+    "Java",
+    "Rust",
+    "c",
+    "c++"
+  };
+
+  static const std::vector<std::string> animal = {
+    "dogs",
+    "cats",
+    "mice",
+    "birds"
+  };
+
+  static const std::vector<std::string> NN = {
+    "Dense",
+    "CNN",
+    "RNN",
+    "Attention"
+  };
+
+std::string make_str3(std::mt19937 &gen){
+  std::string s;
+
+  size_t ty1 = gen() % 4;
+  size_t ty2 = gen() % 4;
+  size_t ty3 = gen() % 4;
+  size_t ty4 = gen() % 4;
+
+  if(ty1 == 0){
+    s += food.at(ty2) + " is food and ";
+  }else if(ty1 == 1){
+    s += lang.at(ty2) + " is language and ";
+  }else if(ty1 == 2){
+    s += animal.at(ty2) + " is animal and ";
+  }else if(ty1 == 3){
+    s += NN.at(ty2) + " is NN and ";
+  }
+
+  if(ty3 == 0){
+    s += food.at(ty4) + " is food.";
+  }else if(ty3 == 1){
+    s += lang.at(ty4) + " is language.";
+  }else if(ty3 == 2){
+    s += animal.at(ty4) + " is animal.";
+  }else if(ty3 == 3){
+    s += NN.at(ty4) + " is NN.";
+  }
+
+  return s;
+}
+
+std::string make_str2(std::mt19937 &gen){
+  std::string s = "What is ";
+
+  size_t ty1 = gen() % 4;
+
+  size_t ty2 = gen() % 4;
+
+  std::string value;
+
+  if(ty1 == 0){
+    ty2 %= 2;
+    value = food.at(ty2);
+    s += value;
+  }else if(ty1 == 1){
+    value = lang.at(ty2);
+    s += value;
+  }else if(ty1 == 2){
+    value = animal.at(ty2);
+    s += value;
+  }else if(ty1 == 3){
+    value = NN.at(ty2);
+    s += value;
+  }
+
+  value[0] = std::toupper(value[0]);
+
+  s += "?" + token::ASSISTANT + value + " is ";
+
+  if(ty1 == 0){
+    s += "food";
+  }else if(ty1 == 1){
+    s += "language";
+  }else if(ty1 == 2){
+    s += "animal";
+  }else if(ty1 == 3){
+    s += "NN";
+  }
+
+  s += ".";
+
+  return s;
+}
+
+std::string make_str1(std::mt19937 &gen){
+  std::string s;
+
+  size_t ty1 = 0;
+
+  size_t ty2 = 0;
+
+  size_t ty3 = 0;
+
+  do{
+    ty1 = gen() % 4;
+
+    ty2 = gen() % 3;
+
+    ty3 = gen() % 4;
+  }while(!(ty1 != 3 || ty2 != 1));
+
+  s += q.at(ty1) + llh.at(ty2) + "?" + token::ASSISTANT;
+  s += "I " + llh.at(ty2) + " ";
+  if(ty1 == 0){
+    s += food.at(ty3);
+  }else if(ty1 == 1){
+    s += lang.at(ty3);
+  }else if(ty1 == 2){
+    s += animal.at(ty3);
+  }else if(ty1 == 3){
+    s += NN.at(ty3);
+  }
+  if(llh.at(ty2) == "love"){
+    s += " the best";
+  }
+  s += ".";
+
+  return s;
+}
+
+
+std::string make_str(std::mt19937 &gen){
+  size_t ty = gen() % 3;
+
+  if(ty == 0){
+    return make_str1(gen);
+  }else if(ty == 1){
+    return make_str2(gen);
+  }
+
+  return make_str3(gen);
+}
+
 int main(){
-  const std::string case1 = "What food do you love?" + token::ASSISTANT;
-  const std::string case1_1 = "I love apple the best.";
-  const std::string case1_2 = "I love pineapple the best.";
-  const std::string case1_3 = "I love banana the best.";
-  const std::string case1_4 = "I love orange the best.";
+  std::mt19937 gen(0);
 
-  const std::string case01_1 = "apple is food.";
-  const std::string case01_2 = "pineapple is food.";
-  const std::string case01_3 = "banana is food.";
-  const std::string case01_4 = "orange is food.";
+  for(int i = 0;i < 100;i++){
+    std::cout << make_str(gen) << std::endl;
+  }
 
-  const std::string case2 = "Its food.";
-  const std::string case2_1 = "What is apple?" + token::ASSISTANT;
-  const std::string case2_2 = "What is pineapple?" + token::ASSISTANT;
-  const std::string case2_3 = "What is banana?" + token::ASSISTANT;
-  const std::string case2_4 = "What is orange?" + token::ASSISTANT;
-
-  const std::string case3 = "What language do you like?" + token::ASSISTANT;
-  const std::string case3_1 = "I like Java.";
-  const std::string case3_2 = "I like Rust.";
-  const std::string case3_3 = "I like c.";
-  const std::string case3_4 = "I like c++.";
-
-  const std::string case03_1 = "Java is language.";
-  const std::string case03_2 = "Rust is language.";
-  const std::string case03_3 = "c is language.";
-  const std::string case03_4 = "c++ is language.";
-
-  const std::string case4 = "Its language.";
-  const std::string case4_1 = "What is Java?" + token::ASSISTANT;
-  const std::string case4_2 = "What is Rust?" + token::ASSISTANT;
-  const std::string case4_3 = "What is c?" + token::ASSISTANT;
-  const std::string case4_4 = "What is c++?" + token::ASSISTANT;
-
-  const std::string case5 = "What animal do you like?" + token::ASSISTANT;
-  const std::string case5_1 = "I like dogs.";
-  const std::string case5_2 = "I like cats.";
-  const std::string case5_3 = "I like birds.";
-  const std::string case5_4 = "I like mice.";
-
-  const std::string case05_1 = "dogs is animal.";
-  const std::string case05_2 = "cats is animal.";
-  const std::string case05_3 = "birds is animal.";
-  const std::string case05_4 = "mice is animal.";
+  //return 0;
 
   EnglishTokenizer et;
 
@@ -91,78 +218,34 @@ int main(){
   return 0;*/
 
   Vocabulary voc;
+  voc.add(et.tokenize("attention is all you need like love have What do you like? Its the best and food language animal NN"));
+  voc.add(et.tokenize(make_str1(gen)));
+  voc.add(et.tokenize(make_str2(gen)));
+  voc.add(et.tokenize(make_str3(gen)));
 
-  voc.add(et.tokenize(case1 + case1_1 + case1_1 + case1_3 + case1_4));
-  voc.add(et.tokenize(case2 + case2_1 + case2_1 + case2_3 + case2_4));
-  voc.add(et.tokenize(case3 + case3_1 + case3_1 + case3_3 + case3_4));
-  voc.add(et.tokenize(case4 + case4_1 + case4_1 + case4_3 + case4_4));
-  voc.add(et.tokenize(case5 + case5_1 + case5_1 + case5_3 + case5_4));
+  voc.add(et.tokenize(food.at(0)));
+  voc.add(et.tokenize(food.at(1)));
+  voc.add(et.tokenize(food.at(2)));
+  voc.add(et.tokenize(food.at(3)));
 
-  voc.add(et.tokenize(case1_1 + case1_1 + case1_3 + case1_4));
-  voc.add(et.tokenize(case3_1 + case3_1 + case3_3 + case3_4));
-  voc.add(et.tokenize(case5_1 + case5_1 + case5_3 + case5_4));
+  voc.add(et.tokenize(lang.at(0)));
+  voc.add(et.tokenize(lang.at(1)));
+  voc.add(et.tokenize(lang.at(2)));
+  voc.add(et.tokenize(lang.at(3)));
 
-  voc.add(et.tokenize("I'll be back python transformer attention is all you need"));
+  voc.add(et.tokenize(animal.at(0)));
+  voc.add(et.tokenize(animal.at(1)));
+  voc.add(et.tokenize(animal.at(2)));
+  voc.add(et.tokenize(animal.at(3)));
+
+  voc.add(et.tokenize(NN.at(0)));
+  voc.add(et.tokenize(NN.at(1)));
+  voc.add(et.tokenize(NN.at(2)));
+  voc.add(et.tokenize(NN.at(3)));
 
   //std::cout << voc.to_string() << std::endl;
 
-  std::vector<std::vector<int64_t>> ids = {
-    {voc.stoi(et.format(case1 + case1_1,32))},
-    {voc.stoi(et.format(case1 + case1_1,32))},
-    {voc.stoi(et.format(case1 + case1_1,32))},
-    {voc.stoi(et.format(case1 + case1_1,32))}
-  };
-
-  std::vector<std::vector<std::vector<int64_t>>> idss = {
-    {
-      {voc.stoi(et.format(case1 + case1_1,32))},
-      {voc.stoi(et.format(case1 + case1_2,32))},
-      {voc.stoi(et.format(case1 + case1_3,32))},
-      {voc.stoi(et.format(case1 + case1_4,32))}
-    },
-    {
-      {voc.stoi(et.format(case2_1 + case2,32))},
-      {voc.stoi(et.format(case2_2 + case2,32))},
-      {voc.stoi(et.format(case2_3 + case2,32))},
-      {voc.stoi(et.format(case2_4 + case2,32))}
-    },
-    {
-      {voc.stoi(et.format(case3 + case3_1,32))},
-      {voc.stoi(et.format(case3 + case3_2,32))},
-      {voc.stoi(et.format(case3 + case3_3,32))},
-      {voc.stoi(et.format(case3 + case3_4,32))}
-    },
-    {
-      {voc.stoi(et.format(case4_1 + case4,32))},
-      {voc.stoi(et.format(case4_2 + case4,32))},
-      {voc.stoi(et.format(case4_3 + case4,32))},
-      {voc.stoi(et.format(case4_4 + case4,32))}
-    },
-    {
-      {voc.stoi(et.format(case5 + case5_1,32))},
-      {voc.stoi(et.format(case5 + case5_2,32))},
-      {voc.stoi(et.format(case5 + case5_3,32))},
-      {voc.stoi(et.format(case5 + case5_4,32))}
-    },
-    {
-      {voc.stoi(et.format(case01_1,10))},
-      {voc.stoi(et.format(case01_2,10))},
-      {voc.stoi(et.format(case01_3,10))},
-      {voc.stoi(et.format(case01_4,10))}
-    },
-    {
-      {voc.stoi(et.format(case03_1,10))},
-      {voc.stoi(et.format(case03_2,10))},
-      {voc.stoi(et.format(case03_3,10))},
-      {voc.stoi(et.format(case03_4,10))}
-    },
-    {
-      {voc.stoi(et.format(case05_1,10))},
-      {voc.stoi(et.format(case05_2,10))},
-      {voc.stoi(et.format(case05_3,10))},
-      {voc.stoi(et.format(case05_4,10))}
-    }
-  };
+  std::vector<std::vector<int64_t>> ids;
 
   //std::cout << target.to_string() << std::endl;
 
@@ -186,34 +269,37 @@ int main(){
    .add<layer::FFN>(32,32*4,voc.size())
    .add<layer::Softmax>();
 
-  std::mt19937 gen(0);
-
   em.random_init(gen);
   m.random_init(gen);
 
   const float lr = 0.001f;
 
-  for(int64_t i = 0;i < 5000;i++){
-    const size_t ba = gen() % idss.size();
+  for(int64_t i = 0;i < 3000;i++){
+    std::cout << "time:" << i << " ----------------------------------------" << std::endl;
 
-    tensor::Tensor target({static_cast<int64_t>(idss.at(ba).size()),static_cast<int64_t>(idss.at(ba).at(0).size()),voc.size()});
+    ids = {
+      {voc.stoi(et.format(make_str(gen),32))},
+      {voc.stoi(et.format(make_str(gen),32))},
+      {voc.stoi(et.format(make_str(gen),32))},
+      {voc.stoi(et.format(make_str(gen),32))}
+    };
+
+    tensor::Tensor target({static_cast<int64_t>(ids.size()),static_cast<int64_t>(ids.at(0).size()),voc.size()});
 
     for(int64_t i = 0;i < target.dim(0);i++){
       for(int64_t j = 0;j < target.dim(1);j++){
         if(j + 1 == target.dim(1)){
           target.at({i,j,0}) = 1.0f;
         }else{
-          target.at({i,j,idss.at(ba).at(i).at(j + 1)}) = 1.0f;
+          target.at({i,j,ids.at(i).at(j + 1)}) = 1.0f;
         }
       }
     }
 
-    const tensor::Tensor &em_out = em.forward(idss.at(ba));
+    const tensor::Tensor &em_out = em.forward(ids);
     const tensor::Tensor &m_out = m.forward(em_out);
 
     em.backward(m.backward(m_out - target));
-
-    std::cout << "time:" << i << " ----------------------------------------" << std::endl;
 
     float loss = 0.0f;
     float conf = 0.0f;
@@ -221,7 +307,7 @@ int main(){
     for(int64_t batch = 0;batch < m_out.dim(0);batch++){
       for(int64_t row = 0;row < m_out.dim(1);row++){
         auto max = std::max_element(&m_out.data()[batch * m_out.stride()[0] + row * m_out.stride()[1]],&m_out.data()[batch * m_out.stride()[0] + (row + 1) * m_out.stride()[1]]);
-        loss -= log(m_out.at({batch,row,(row + 1 < idss.at(ba).at(0).size()) ? idss.at(ba).at(batch).at(row + 1):0}));
+        loss -= log(m_out.at({batch,row,(row + 1 < ids.at(0).size()) ? ids.at(batch).at(row + 1):0}));
         conf += *max;
       }
     }
