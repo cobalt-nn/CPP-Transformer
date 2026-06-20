@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <random>
 #include <cstdint>
@@ -7,6 +8,7 @@
 #include "nlohmann/json.hpp"
 #include "nn/tensor/Tensor.hpp"
 #include "nn/layer/ILayer.hpp"
+#include "nn/io/BinaryIO.hpp"
 
 namespace cobalt_715::nn::layer{
 
@@ -140,9 +142,25 @@ struct RMSNorm : ILayer{
     return get_type() + "::to_string() is undef";
   }
 
-  //json形式で保存するとき使う
   nlohmann::ordered_json to_json() const override{
-    return nlohmann::ordered_json();
+    nlohmann::ordered_json j;
+
+    j["layer_type"] = get_type();
+    j["in"] = gamma_.size();
+
+    return j;
+  }
+
+  void save(std::ostream &os) const override{
+    io::save(os,gamma_.data(),gamma_.size());
+  }
+
+  void load(const nlohmann::ordered_json &json,std::istream &is) override{
+    if(json.at("layer_type") != get_type()){
+      throw std::runtime_error("RMSNorm::load type mismatch");
+    }
+
+    io::load(is,gamma_.data(),gamma_.size());
   }
 
   //ランダム初期化する

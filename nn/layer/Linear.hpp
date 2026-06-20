@@ -9,6 +9,7 @@
 #include "nlohmann/json.hpp"
 #include "nn/tensor/Tensor.hpp"
 #include "nn/tensor/MatrixView.hpp"
+#include "nn/io/BinaryIO.hpp"
 
 namespace cobalt_715::nn::layer{
 
@@ -153,9 +154,29 @@ struct Linear : ILayer{
     return s;
   }
 
-  //json形式で保存するとき使う
-  nlohmann::ordered_json to_json() const{
-    return nlohmann::ordered_json();
+  nlohmann::ordered_json to_json() const override{
+    nlohmann::ordered_json j;
+
+    j["layer_type"] = get_type();
+    j["in"] = W_.dim(0);
+    j["out"] = W_.dim(1);
+    j["has_bias"] = (bias_) ? "true":"false";
+
+    return j;
+  }
+
+  void save(std::ostream &os) const override{
+    io::save(os,W_.data(),W_.numel());
+    io::save(os,b_.data(),b_.numel());
+  }
+
+  void load(const nlohmann::ordered_json &json,std::istream &is) override{
+    if(json.at("layer_type") != get_type()){
+      throw std::runtime_error("Linear::load type mismatch");
+    }
+
+    io::load(is,W_.data(),W_.numel());
+    io::load(is,b_.data(),b_.numel());
   }
 
   //ランダム初期化する

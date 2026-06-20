@@ -1,10 +1,12 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <random>
 #include "ILayer.hpp"
 #include "nlohmann/json.hpp"
 #include "nn/tensor/Tensor.hpp"
+#include "nn/io/BinaryIO.hpp"
 
 namespace cobalt_715::nn::layer{
 
@@ -56,11 +58,22 @@ struct Softmax : ILayer{
   }
 
   nlohmann::ordered_json to_json() const override{
-    return nlohmann::ordered_json();
+    nlohmann::ordered_json j;
+
+    j["layer_type"] = get_type();
+
+    return j;
   }
 
-  void random_init(std::mt19937 &gen) override{
+  void save(std::ostream &os) const override{}
+
+  void load(const nlohmann::ordered_json &json,std::istream &is) override{
+    if(json.at("layer_type") != get_type()){
+      throw std::runtime_error("Softmax::load type mismatch");
+    }
   }
+
+  void random_init(std::mt19937 &gen) override{}
 };
 
 }//namespace cobalt_715::nn::layer

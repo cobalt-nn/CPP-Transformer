@@ -1,6 +1,6 @@
 #pragma once
 
-//#include <iostream>
+#include <iostream>
 #include <string>
 #include <random>
 #include "ILayer.hpp"
@@ -8,6 +8,7 @@
 #include "Identity.hpp"
 #include "nlohmann/json.hpp"
 #include "nn/tensor/Tensor.hpp"
+#include "nn/io/BinaryIO.hpp"
 
 namespace cobalt_715::nn::layer{
 
@@ -104,9 +105,31 @@ struct ReZero : ILayer{
     return s;
   }
 
-  //json形式で保存するとき使う
   nlohmann::ordered_json to_json() const override{
-    return  nlohmann::ordered_json();
+    nlohmann::ordered_json j;
+
+    j["layer_type"] = get_type();
+    j["body"] = body_->to_json();
+    j["projection"] = projection_->to_json();
+
+    return j;
+  }
+
+  void save(std::ostream &os) const override{
+    body_->save(os);
+    projection_->save(os);
+    io::save(os,&alpha_,1);
+  }
+
+  void load(const nlohmann::ordered_json &json,std::istream &is) override{
+    if(json.at("layer_type") != get_type()){
+      throw std::runtime_error("ReZero::load type mismatch");
+    }
+
+    body_->load(json.at("body"),is);
+    projection_->load(json.at("projection"),is);
+
+    io::load(is,&alpha_,1);
   }
 
   //ランダム初期化する

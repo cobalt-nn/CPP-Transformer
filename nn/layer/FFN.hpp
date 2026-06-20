@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <random>
 #include <cstdint>
@@ -8,17 +9,28 @@
 #include "Linear.hpp"
 #include "nlohmann/json.hpp"
 #include "nn/tensor/Tensor.hpp"
+#include "nn/io/BinaryIO.hpp"
 
 namespace cobalt_715::nn::layer{
 
 struct FFN : ILayer{
   FFN(int64_t in)
-    : dense_(in,in * 4),
+    : in_size_(in),
+      out1_size_(in * 4),
+      out2_size_(in),
+      dense_(in,in * 4),
       linear_(in * 4,in,true){}
 
   FFN(int64_t in,int64_t out1,int64_t out2)
-    : dense_(in,out1),
+    : in_size_(in),
+      out1_size_(out1),
+      out2_size_(out2),
+      dense_(in,out1),
       linear_(out1,out2,true){}
+
+  const int64_t in_size_;
+  const int64_t out1_size_;
+  const int64_t out2_size_;
 
   Dense dense_;
   Linear linear_;
@@ -50,7 +62,30 @@ struct FFN : ILayer{
   }
 
   nlohmann::ordered_json to_json() const override{
-    return nlohmann::ordered_json();
+    nlohmann::ordered_json j;
+
+    j["layer_type"] = get_type();
+    j["in"] = in_size_;
+    j["out1"] = out1_size_;
+    j["out2"] = out2_size_;
+    j["dense"] = dense_.to_json();
+    j["linear"] = linear_.to_json();
+
+    return j;
+  }
+
+  void save(std::ostream &os) const override{
+    dense_.save(os);
+    linear_.save(os);
+  }
+
+  void load(const nlohmann::ordered_json &json,std::istream &is) override{
+    if(json.at("layer_type") != get_type()){
+      throw std::runtime_error("FFN::load type mismatch");
+    }
+
+    dense_.load(json.at("dense"),is);
+    linear_.load(json.at("linear"),is);
   }
 
   void random_init(std::mt19937 &gen) override{

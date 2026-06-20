@@ -1,10 +1,11 @@
 #pragma once
 
-//#include <iostream>
+#include <iostream>
 #include <vector>
 #include <cstdint>
 #include <random>
 #include "tensor/Tensor.hpp"
+#include "io/BinaryIO.hpp"
 
 namespace cobalt_715::nn{
 
@@ -72,6 +73,14 @@ struct Embedding{
     for(int64_t i = 0;i < W_.numel();i++){
       Wd[i] = dist(gen);
     }
+  }
+
+  void save(std::ostream &os) const{
+    io::save(os,W_.data(),W_.numel());
+  }
+
+  void load(std::istream &is){
+    io::load(is,W_.data(),W_.numel());
   }
 
   tensor::Tensor W_;

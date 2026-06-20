@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+#include <fstream>
 #include <vector>
 #include <string>
 #include <cstdint>
@@ -97,9 +99,85 @@ public:
     return s;
   }
 
-  //json形式で保存するとき使う
+  //json
   nlohmann::ordered_json to_json() const override{
-    return nlohmann::ordered_json();
+    nlohmann::ordered_json j;
+
+    j["magic_number"] = "CBLM";
+    j["version"] = 1;
+
+    nlohmann::ordered_json j_array = nlohmann::ordered_json::array();
+
+    for(auto &l:layers_){
+      j_array.push_back(l->to_json());
+    }
+
+    j["layers"] = j_array;
+
+    return j;
+  }
+
+  //セーブ
+  void save(std::ostream &os) const override{
+    for(auto &l:layers_){
+      l->save(os);
+    }
+  }
+
+  //ロード
+  void load(const nlohmann::ordered_json &json,std::istream &is) override{
+    if(json.at("magic_number") != "CBLM"){
+      throw std::runtime_error("Model::load magic_number mismatch");
+    }
+
+    if(json.at("version").get<int>() != 1){
+      throw std::runtime_error("Model::load: unsupported version");
+    }
+
+    for(int64_t i = 0;i < layers_.size();i++){
+      layers_.at(i)->load(json.at("layers").at(i),is);
+    }
+  }
+
+  void save_all(const std::string &path_json,const std::string &path_bin){
+    {
+      std::ofstream ofs_json(path_json);
+
+      if(!ofs_json) throw std::runtime_error("Model::save_all json open failed");
+
+      ofs_json << to_json().dump(2);
+
+      if(!ofs_json) throw std::runtime_error("Model::save_all json write failed");
+
+      ofs_json.close();
+    }
+
+    {
+      std::ofstream ofs_bin(path_bin,std::ios::binary);
+
+      if(!ofs_bin) throw std::runtime_error("Model::save_all bin open failed");
+
+      save(ofs_bin);
+
+      if(!ofs_bin) throw std::runtime_error("Model::save_all bin write failed");
+
+      ofs_bin.close();
+    }
+  }
+
+  void load_all(const std::string &path_json,const std::string &path_bin){
+    std::ifstream ifs_json(path_json);
+
+    if(!ifs_json) throw std::runtime_error("Model::load_all json open failed");
+
+    nlohmann::ordered_json json;
+    ifs_json >> json;
+
+    std::ifstream ifs_bin(path_bin,std::ios::binary);
+
+    if(!ifs_bin) throw std::runtime_error("Model::load_all bin open failed");
+
+    load(json,ifs_bin);
   }
 
   //ランダム初期化する

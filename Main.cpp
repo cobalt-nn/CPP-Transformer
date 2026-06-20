@@ -1,4 +1,6 @@
 #include <iostream>
+#include <filesystem>
+#include <fstream>
 #include <random>
 #include <vector>
 #include <chrono>
@@ -24,6 +26,8 @@
 #include "nn/ops/Acts.hpp"
 #include "nn/ops/GEMM.hpp"
 
+#include "nn/IO/BinaryIO.hpp"
+
 #include "nn/Model.hpp"
 #include "nn/EnglishTokenizer.hpp"
 #include "nn/Vocabulary.hpp"
@@ -31,6 +35,8 @@
 #include "nn/SpecialToken.hpp"
 
 #include "data/MNISTLoader.hpp"
+
+#include "nlohmann/json.hpp"
 
 using namespace cobalt_715::nn;
 
@@ -75,6 +81,26 @@ using namespace cobalt_715::nn;
     "Attention"
   };
 
+std::string make_str4(std::mt19937 &gen){
+  size_t ty1 = gen() % 4;
+  size_t ty2 = gen() % 4;
+  size_t ty3 = gen() % 4;
+
+  std::string s;
+
+  if(ty1 == 0){
+    s = food.at(ty2) + " and " + food.at(ty3);
+  }else if(ty1 == 1){
+    s = lang.at(ty2) + " and " + lang.at(ty3);
+  }else if(ty1 == 2){
+    s = animal.at(ty2) + " and " + animal.at(ty3);
+  }else if(ty1 == 3){
+    s = NN.at(ty2) + " and " + NN.at(ty3);
+  }
+
+  return s + " " +  token::ASSISTANT + " " + s;
+}
+
 std::string make_str3(std::mt19937 &gen){
   std::string s;
 
@@ -116,7 +142,7 @@ std::string make_str2(std::mt19937 &gen){
   std::string value;
 
   if(ty1 == 0){
-    ty2 %= 2;
+    ty2 = gen() % 3;
     value = food.at(ty2);
     s += value;
   }else if(ty1 == 1){
@@ -185,23 +211,24 @@ std::string make_str1(std::mt19937 &gen){
   return s;
 }
 
-
 std::string make_str(std::mt19937 &gen){
-  size_t ty = gen() % 3;
+  size_t ty = gen() % 4;
 
   if(ty == 0){
     return make_str1(gen);
   }else if(ty == 1){
     return make_str2(gen);
+  }else if(ty == 2){
+    return make_str3(gen);
   }
 
-  return make_str3(gen);
+  return make_str4(gen);
 }
 
 int main(){
   std::mt19937 gen(0);
 
-  for(int i = 0;i < 100;i++){
+  for(int i = 0;i < 0;i++){
     std::cout << make_str(gen) << std::endl;
   }
 
@@ -269,12 +296,18 @@ int main(){
    .add<layer::FFN>(32,32*4,voc.size())
    .add<layer::Softmax>();
 
-  em.random_init(gen);
-  m.random_init(gen);
+  std::ifstream ifs("nn/models/embmodel.bin",std::ios::binary);
+
+  em.load(ifs);
+
+  m.load_all("nn/models/model.json","nn/models/model.bin");
 
   const float lr = 0.001f;
 
-  for(int64_t i = 0;i < 3000;i++){
+  //em.random_init(gen);
+  //m.random_init(gen);
+
+  for(int64_t i = 0;i < 1000;i++){
     std::cout << "time:" << i << " ----------------------------------------" << std::endl;
 
     ids = {
@@ -326,7 +359,13 @@ int main(){
     m.zero_grad();
   }
 
-  std::uniform_real_distribution<float> dist(0.0f,1.0f);
+  //std::cout << std::filesystem::current_path() << std::endl;
+
+  std::ofstream ofs("nn/models/embmodel.bin",std::ios::binary);
+
+  em.save(ofs);
+
+  m.save_all("nn/models/model.json","nn/models/model.bin");
 
   while(true){
     std::cout << "--------------------------------------------------" << std::endl;

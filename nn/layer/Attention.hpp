@@ -11,13 +11,15 @@
 #include "nn/tensor/Tensor.hpp"
 #include "nn/layer/ILayer.hpp"
 #include "nn/layer/Linear.hpp"
+#include "nn/io/BinaryIO.hpp"
 
 namespace cobalt_715::nn::layer{
 
 //self attention
 struct Attention : ILayer{
   Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v)
-    : qkv_linear_(in,num_heads * (d_qk * 2 + d_v),true),
+    : in_size_(in),
+      qkv_linear_(in,num_heads * (d_qk * 2 + d_v),true),
       num_heads_(num_heads),
       d_qk_(d_qk),
       d_v_(d_v),
@@ -29,10 +31,11 @@ struct Attention : ILayer{
       d_qkv_({1,1,1}),
       d_weights_({1,1,1,1}),
       d_scores_({1,1,1,1}),
-      mask_bool_(false){}
+      attn_mask_bool_(false){}
 
-  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v,int64_t kv_cache_max_length,bool mask)
-    : qkv_linear_(in,num_heads * (d_qk * 2 + d_v),true),
+  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v,int64_t kv_cache_max_length,bool attn_mask)
+    : in_size_(in),
+      qkv_linear_(in,num_heads * (d_qk * 2 + d_v),true),
       num_heads_(num_heads),
       d_qk_(d_qk),
       d_v_(d_v),
@@ -45,7 +48,7 @@ struct Attention : ILayer{
       d_weights_({1,1,1,1}),
       d_scores_({1,1,1,1}),
       cache_(KVCache(d_qk * num_heads,d_v * num_heads,kv_cache_max_length)),
-      mask_bool_(mask){}
+      attn_mask_bool_(attn_mask){}
 
   struct KVCache{
     KVCache(int64_t d_k,int64_t d_v,int64_t max_length)
@@ -115,7 +118,9 @@ struct Attention : ILayer{
     int64_t max_length_ = 0;
   };
 
-  const bool mask_bool_;
+  const int64_t in_size_;
+
+  const bool attn_mask_bool_;
 
   std::optional<KVCache> cache_ = std::nullopt;//forward()の引数trainingがfalseかつKVCacheが存在するときキャッシュする
 
@@ -138,7 +143,7 @@ struct Attention : ILayer{
 
   std::vector<float> max_weights_;
   std::vector<double> sum_weights_;
-  std::vector<int64_t> mask_col_ends_;//マスクするときscores_の各行の終端を保持する
+  std::vector<int64_t> attn_mask_col_ends_;//マスクするときscores_の各行の終端を保持する
 
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
     if(input.rank() != 3) throw std::runtime_error("Attention: input must be 3D");
@@ -270,12 +275,12 @@ struct Attention : ILayer{
 
   //softmax(scores_)
   void compute_weights(bool training){
-    if(mask_bool_){
+    if(attn_mask_bool_){
       for(int row = 0;row < weights_.dim(2);row++){
         if(training){
-          mask_col_ends_[row] = row + 1;
+          attn_mask_col_ends_[row] = row + 1;
         }else{
-          mask_col_ends_[row] = cache_.value().get_current_len() - weights_.dim(2) + row + 1;
+          attn_mask_col_ends_[row] = cache_.value().get_current_len() - weights_.dim(2) + row + 1;
         }
       }
     }
@@ -289,13 +294,13 @@ struct Attention : ILayer{
 
         //最大の要素を求める
         for(int64_t row = 0;row < weights_.dim(2);row++){
-          max_weights_[row] = *std::max_element(&scores_view.at(row,0),&scores_view.at(row,mask_col_ends_[row]));
+          max_weights_[row] = *std::max_element(&scores_view.at(row,0),&scores_view.at(row,attn_mask_col_ends_[row]));
         }
 
         //exp(col - max)の合計値を求める
         for(int64_t row = 0;row < weights_.dim(2);row++){
           sum_weights_[row] = 0;
-          for(int64_t col = 0;col < mask_col_ends_[row];col++){
+          for(int64_t col = 0;col < attn_mask_col_ends_[row];col++){
             sum_weights_[row] += std::exp(scores_view.at(row,col) - max_weights_[row]);
           }
         }
@@ -304,7 +309,7 @@ struct Attention : ILayer{
 
         //softmaxを求める
         for(int64_t row = 0;row < weights_.dim(2);row++){
-          for(int64_t col = 0;col < mask_col_ends_[row];col++){
+          for(int64_t col = 0;col < attn_mask_col_ends_[row];col++){
             weights_view.at(row,col) = static_cast<float>(std::exp(scores_view.at(row,col) - max_weights_[row]) / sum_weights_[row]);
           }
         }
@@ -362,14 +367,14 @@ struct Attention : ILayer{
       std::fill(output_.data(),output_.data() + output_.numel(),0.0f);
     }
 
-    if(sum_weights_.size() != scores_.dim(2) || sum_weights_.size() != max_weights_.size() || sum_weights_.size() != mask_col_ends_.size()){
+    if(sum_weights_.size() != scores_.dim(2) || sum_weights_.size() != max_weights_.size() || sum_weights_.size() != attn_mask_col_ends_.size()){
       sum_weights_ = std::vector<double>(scores_.dim(2));
       max_weights_ = std::vector<float>(scores_.dim(2));
-      mask_col_ends_ = std::vector<int64_t>(scores_.dim(2));
+      attn_mask_col_ends_ = std::vector<int64_t>(scores_.dim(2));
     }else{
       std::fill(sum_weights_.begin(),sum_weights_.end(),0.0f);
       std::fill(max_weights_.begin(),max_weights_.end(),0.0f);
-      std::fill(mask_col_ends_.begin(),mask_col_ends_.end(),scores_.dim(3));
+      std::fill(attn_mask_col_ends_.begin(),attn_mask_col_ends_.end(),scores_.dim(3));
     }
   }
 
@@ -604,7 +609,35 @@ for(int i = 0;i < dw_view.rows();i++){
   }
 
   nlohmann::ordered_json to_json() const override{
-    return nlohmann::ordered_json();
+    nlohmann::ordered_json j;
+
+    j["layer_type"] = get_type();
+    j["in"] = in_size_;
+    j["num_heads"] = num_heads_;
+    j["d_qk"] = d_qk_;
+    j["d_v"] = d_v_;
+    j["kv_cache"] = (cache_) ? "true":"false";
+
+    if(cache_){
+      j["kv_cache_max_length"] = cache_.value().get_max_len();
+    }
+
+    j["attn_mask"] = (attn_mask_bool_) ? "true":"false";
+    j["qkv_linear"] = qkv_linear_.to_json();
+
+    return j;
+  }
+
+  void save(std::ostream &os) const override{
+    qkv_linear_.save(os);
+  }
+
+  void load(const nlohmann::ordered_json &json,std::istream &is) override{
+    if(json.at("layer_type") != get_type()){
+      throw std::runtime_error("Attention::load type mismatch");
+    }
+
+    qkv_linear_.load(json.at("qkv_linear"),is);
   }
 
   void random_init(std::mt19937 &gen) override{

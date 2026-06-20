@@ -11,6 +11,7 @@
 #include "nn/tensor/MatrixView.hpp"
 #include "nn/ops/Activation.hpp"
 #include "nn/ops/Acts.hpp"
+#include "nn/io/BinaryIO.hpp"
 
 namespace cobalt_715::nn::layer{
 
@@ -120,7 +121,7 @@ struct Dense : ILayer{
 
   //更新
   //学習率、バッチサイズを受け取る
-  void step(float lr,int batch_size=64){
+  void step(float lr,int batch_size=64) override{
     dW_.scale_(lr);
     W_ -= dW_;
 
@@ -129,7 +130,7 @@ struct Dense : ILayer{
   }
 
   //勾配をリセットする
-  void zero_grad(){
+  void zero_grad() override{
     float *dWd = dW_.data();
 
     std::fill(dWd,dWd + dW_.numel(),0.0f);
@@ -154,9 +155,29 @@ struct Dense : ILayer{
     return s;
   }
 
-  //json形式で保存するとき使う
-  nlohmann::ordered_json to_json() const{
-    return nlohmann::ordered_json();
+  nlohmann::ordered_json to_json() const override{
+    nlohmann::ordered_json j;
+
+    j["layer_type"] = get_type();
+    j["in"] = W_.dim(0);
+    j["out"] = W_.dim(1);
+    j["activation"] = act_->name;
+
+    return j;
+  }
+
+  void save(std::ostream &os) const override{
+    io::save(os,W_.data(),W_.numel());
+    io::save(os,b_.data(),b_.numel());
+  }
+
+  void load(const nlohmann::ordered_json &json,std::istream &is) override{
+    if(json.at("layer_type") != get_type()){
+      throw std::runtime_error("Dense::load type mismatch");
+    }
+
+    io::load(is,W_.data(),W_.numel());
+    io::load(is,b_.data(),b_.numel());
   }
 
   //ランダム初期化する

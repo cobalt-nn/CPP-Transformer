@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <random>
 #include "nlohmann/json.hpp"
@@ -37,8 +38,14 @@ struct ILayer{
     return get_type() + "::to_string() is undef";
   }
 
-  //json形式で保存するとき使う
+  //json
   virtual nlohmann::ordered_json to_json() const = 0;
+
+  //セーブ
+  virtual void save(std::ostream &os) const = 0;
+
+  //ロード
+  virtual void load(const nlohmann::ordered_json &json,std::istream &is) = 0;
 
   //ランダム初期化する
   virtual void random_init(std::mt19937 &gen) = 0;
