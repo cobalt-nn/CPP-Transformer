@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #include "nn/backend/backend.hpp"
 
 //基本的なベクトル演算を用意している

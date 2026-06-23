@@ -3,6 +3,7 @@
 #include <vector>
 #include <span>
 #include <cstdint>
+#include <cstddef>
 #include <stdexcept>
 #include <cassert>
 #include <string>

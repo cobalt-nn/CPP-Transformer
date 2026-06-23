@@ -16,7 +16,7 @@
         "d_v": 32,
         "kv_cache": "true",
         "kv_cache_max_length": 64,
-        "attn_mask": "true",
+        "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
           "in": 32,
@@ -73,7 +73,7 @@
         "d_v": 32,
         "kv_cache": "true",
         "kv_cache_max_length": 64,
-        "attn_mask": "true",
+        "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
           "in": 32,
@@ -130,7 +130,7 @@
         "d_v": 32,
         "kv_cache": "true",
         "kv_cache_max_length": 64,
-        "attn_mask": "true",
+        "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
           "in": 32,

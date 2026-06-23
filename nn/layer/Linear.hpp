@@ -4,6 +4,7 @@
 #include <string>
 #include <random>
 #include <cstdint>
+#include <cstddef>
 #include <stdexcept>
 #include "ILayer.hpp"
 #include "nlohmann/json.hpp"

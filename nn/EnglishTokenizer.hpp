@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <cctype>
 #include <algorithm>
+#include <cstddef>
 #include "SpecialToken.hpp"
 
 namespace cobalt_715::nn{

@@ -1,8 +1,11 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 #include <string>
 #include <random>
+#include <cstdint>
+#include <cstddef>
 #include "ILayer.hpp"
 #include "Linear.hpp"
 #include "Identity.hpp"

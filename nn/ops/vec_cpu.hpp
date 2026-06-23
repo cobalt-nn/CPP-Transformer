@@ -1,6 +1,7 @@
 #pragma once
 
 #include <immintrin.h>
+#include <cstddef>
 #include "vec.hpp"
 #include "nn/backend/backend.hpp"
 

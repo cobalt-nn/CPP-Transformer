@@ -4,6 +4,7 @@
 #include <string>
 #include <random>
 #include <cstdint>
+#include <cstddef>
 #include <stdexcept>
 #include "nlohmann/json.hpp"
 #include "nn/tensor/Tensor.hpp"

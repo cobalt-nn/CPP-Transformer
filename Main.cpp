@@ -1,11 +1,14 @@
 #include <iostream>
+#include <memory>
 #include <filesystem>
 #include <fstream>
 #include <random>
 #include <vector>
 #include <chrono>
 #include <ctime>
+#include <cstdint>
 #include <cmath>
+#include <cstddef>
 #include "nn/ops/vec.hpp"
 #include "nn/ops/vec_cpu.hpp"
 #include "nn/tensor/Tensor.hpp"
@@ -26,7 +29,7 @@
 #include "nn/ops/Acts.hpp"
 #include "nn/ops/GEMM.hpp"
 
-#include "nn/IO/BinaryIO.hpp"
+#include "nn/io/BinaryIO.hpp"
 
 #include "nn/Model.hpp"
 #include "nn/EnglishTokenizer.hpp"
@@ -307,7 +310,7 @@ int main(){
   //em.random_init(gen);
   //m.random_init(gen);
 
-  for(int64_t i = 0;i < 1000;i++){
+  for(int64_t i = 0;i < 100;i++){
     std::cout << "time:" << i << " ----------------------------------------" << std::endl;
 
     ids = {

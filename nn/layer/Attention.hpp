@@ -6,6 +6,7 @@
 #include <vector>
 #include <random>
 #include <cstdint>
+#include <cstddef>
 #include <stdexcept>
 #include "nlohmann/json.hpp"
 #include "nn/tensor/Tensor.hpp"
@@ -31,9 +32,9 @@ struct Attention : ILayer{
       d_qkv_({1,1,1}),
       d_weights_({1,1,1,1}),
       d_scores_({1,1,1,1}),
-      attn_mask_bool_(false){}
+      causal_mask_bool_(false){}
 
-  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v,int64_t kv_cache_max_length,bool attn_mask)
+  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v,int64_t kv_cache_max_length,bool causal_mask)
     : in_size_(in),
       qkv_linear_(in,num_heads * (d_qk * 2 + d_v),true),
       num_heads_(num_heads),
@@ -48,7 +49,7 @@ struct Attention : ILayer{
       d_weights_({1,1,1,1}),
       d_scores_({1,1,1,1}),
       cache_(KVCache(d_qk * num_heads,d_v * num_heads,kv_cache_max_length)),
-      attn_mask_bool_(attn_mask){}
+      causal_mask_bool_(causal_mask){}
 
   struct KVCache{
     KVCache(int64_t d_k,int64_t d_v,int64_t max_length)
@@ -120,7 +121,7 @@ struct Attention : ILayer{
 
   const int64_t in_size_;
 
-  const bool attn_mask_bool_;
+  const bool causal_mask_bool_;
 
   std::optional<KVCache> cache_ = std::nullopt;//forward()の引数trainingがfalseかつKVCacheが存在するときキャッシュする
 
@@ -143,7 +144,7 @@ struct Attention : ILayer{
 
   std::vector<float> max_weights_;
   std::vector<double> sum_weights_;
-  std::vector<int64_t> attn_mask_col_ends_;//マスクするときscores_の各行の終端を保持する
+  std::vector<int64_t> causal_mask_col_ends_;//マスクするときscores_の各行の終端を保持する
 
   const tensor::Tensor& forward(const tensor::Tensor& input,bool training=true) override{
     if(input.rank() != 3) throw std::runtime_error("Attention: input must be 3D");
@@ -275,12 +276,12 @@ struct Attention : ILayer{
 
   //softmax(scores_)
   void compute_weights(bool training){
-    if(attn_mask_bool_){
+    if(causal_mask_bool_){
       for(int row = 0;row < weights_.dim(2);row++){
         if(training){
-          attn_mask_col_ends_[row] = row + 1;
+          causal_mask_col_ends_[row] = row + 1;
         }else{
-          attn_mask_col_ends_[row] = cache_.value().get_current_len() - weights_.dim(2) + row + 1;
+          causal_mask_col_ends_[row] = cache_.value().get_current_len() - weights_.dim(2) + row + 1;
         }
       }
     }
@@ -294,13 +295,13 @@ struct Attention : ILayer{
 
         //最大の要素を求める
         for(int64_t row = 0;row < weights_.dim(2);row++){
-          max_weights_[row] = *std::max_element(&scores_view.at(row,0),&scores_view.at(row,attn_mask_col_ends_[row]));
+          max_weights_[row] = *std::max_element(&scores_view.at(row,0),&scores_view.at(row,causal_mask_col_ends_[row]));
         }
 
         //exp(col - max)の合計値を求める
         for(int64_t row = 0;row < weights_.dim(2);row++){
           sum_weights_[row] = 0;
-          for(int64_t col = 0;col < attn_mask_col_ends_[row];col++){
+          for(int64_t col = 0;col < causal_mask_col_ends_[row];col++){
             sum_weights_[row] += std::exp(scores_view.at(row,col) - max_weights_[row]);
           }
         }
@@ -309,7 +310,7 @@ struct Attention : ILayer{
 
         //softmaxを求める
         for(int64_t row = 0;row < weights_.dim(2);row++){
-          for(int64_t col = 0;col < attn_mask_col_ends_[row];col++){
+          for(int64_t col = 0;col < causal_mask_col_ends_[row];col++){
             weights_view.at(row,col) = static_cast<float>(std::exp(scores_view.at(row,col) - max_weights_[row]) / sum_weights_[row]);
           }
         }
@@ -367,14 +368,14 @@ struct Attention : ILayer{
       std::fill(output_.data(),output_.data() + output_.numel(),0.0f);
     }
 
-    if(sum_weights_.size() != scores_.dim(2) || sum_weights_.size() != max_weights_.size() || sum_weights_.size() != attn_mask_col_ends_.size()){
+    if(sum_weights_.size() != scores_.dim(2) || sum_weights_.size() != max_weights_.size() || sum_weights_.size() != causal_mask_col_ends_.size()){
       sum_weights_ = std::vector<double>(scores_.dim(2));
       max_weights_ = std::vector<float>(scores_.dim(2));
-      attn_mask_col_ends_ = std::vector<int64_t>(scores_.dim(2));
+      causal_mask_col_ends_ = std::vector<int64_t>(scores_.dim(2));
     }else{
       std::fill(sum_weights_.begin(),sum_weights_.end(),0.0f);
       std::fill(max_weights_.begin(),max_weights_.end(),0.0f);
-      std::fill(attn_mask_col_ends_.begin(),attn_mask_col_ends_.end(),scores_.dim(3));
+      std::fill(causal_mask_col_ends_.begin(),causal_mask_col_ends_.end(),scores_.dim(3));
     }
   }
 
@@ -622,7 +623,7 @@ for(int i = 0;i < dw_view.rows();i++){
       j["kv_cache_max_length"] = cache_.value().get_max_len();
     }
 
-    j["attn_mask"] = (attn_mask_bool_) ? "true":"false";
+    j["causal_mask"] = (causal_mask_bool_) ? "true":"false";
     j["qkv_linear"] = qkv_linear_.to_json();
 
     return j;
