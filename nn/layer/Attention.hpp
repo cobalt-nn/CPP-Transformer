@@ -143,9 +143,11 @@ struct Attention : ILayer{
 
     //std::cout << qkv_->to_string() << std::endl;
 
-    tensor::ConstMatrixView big_q_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,q_offset_);
-    tensor::ConstMatrixView big_k_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,k_offset_);
-    tensor::ConstMatrixView big_v_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_v_ * num_heads_,qkv_->dim(2),1,v_offset_);
+    const int64_t big_qkv_rows = qkv_->dim(0) * qkv_->dim(1);//TensorViewが無いため
+
+    tensor::ConstMatrixView big_q_view = qkv_->unsafe_matrix_view(big_qkv_rows,d_qk_ * num_heads_,qkv_->dim(2),1,q_offset_);
+    tensor::ConstMatrixView big_k_view = qkv_->unsafe_matrix_view(big_qkv_rows,d_qk_ * num_heads_,qkv_->dim(2),1,k_offset_);
+    tensor::ConstMatrixView big_v_view = qkv_->unsafe_matrix_view(big_qkv_rows,d_v_ * num_heads_,qkv_->dim(2),1,v_offset_);
 
     if(cache_ && !training){
       if(input.dim(0) != 1) throw std::runtime_error("Attention: KV cache is true && training is false batch must be 1");
@@ -156,13 +158,16 @@ struct Attention : ILayer{
       big_v_view = cache_.value().get_v_view();
     }
 
+    const int64_t Tq = input.dim(1);//Qの系列長
+    const int64_t Tkv = (cache_ && !training) ? cache_.value().get_current_len() : Tq;//K,Vの系列長
+
     //std::cout << "big_q_view" << big_q_view.to_string() << std::endl;
     //std::cout << "big_k_view" << big_k_view.to_string() << std::endl;
     //std::cout << "big_v_view" << big_v_view.to_string() << std::endl;
 
-    forward_ensure_shape(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols());
+    forward_ensure_shape(Tq,Tkv);
 
-    compute_scores(big_q_view,big_k_view,training);
+    compute_scores(big_q_view,big_k_view,training,Tq,Tkv);
 
     //std::cout << "scores" << scores_.to_string() << std::endl;
 
@@ -172,11 +177,11 @@ struct Attention : ILayer{
 
     //std::cout << "weights" << weights_.to_string() << std::endl;
 
-    compute_output(big_v_view);
+    compute_output(big_v_view,Tkv);
 
     //std::cout << "output" << output_.to_string() << std::endl;
 
-    float mx = -1e30f;
+    /*float mx = -1e30f;
 
     for(int i = 0;i < scores_.numel();i++){
       mx = std::max(mx,std::abs(scores_.data()[i]));
@@ -188,17 +193,17 @@ struct Attention : ILayer{
       //std::cout << "scores" << scores_.to_string() << std::endl;
       //std::cout << "weights" << weights_.to_string() << std::endl;
     }
-    count++;
+    count++;*/
 
     return output_;
   }
 
   //QKt / √d
-  void compute_scores(const tensor::ConstMatrixView big_q_view,const tensor::ConstMatrixView big_k_view,bool training){
+  void compute_scores(const tensor::ConstMatrixView big_q_view,const tensor::ConstMatrixView big_k_view,bool training,const int64_t Tq,const int64_t Tkv){
     const float rec_sqrt_d = 1.0f / std::sqrt(d_qk_);
 
-    tensor::Tensor small_q({big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_});
-    tensor::Tensor small_k({big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_});
+    tensor::Tensor small_q({Tq,d_qk_});
+    tensor::Tensor small_k({Tkv,d_qk_});
 
     tensor::MatrixView q_view = small_q.flatten_matrix_view();
     tensor::MatrixView k_view = small_k.flatten_matrix_view();
@@ -214,11 +219,9 @@ struct Attention : ILayer{
 
         tensor::MatrixView scores_view = scores_.as_matrix_view(scores_dim);
 
-        const tensor::ConstMatrixView q_view1 = big_q_view.block(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_,
-          batch * big_q_view.numel() / big_q_view.cols() / input_ptr_->dim(0),head * d_qk_);
+        const tensor::ConstMatrixView q_view1 = big_q_view.block(Tq,d_qk_,batch * Tq,head * d_qk_);
 
-        const tensor::ConstMatrixView k_view1 = big_k_view.block(big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_,
-          batch * big_k_view.numel() / big_k_view.cols() / input_ptr_->dim(0),head * d_qk_);
+        const tensor::ConstMatrixView k_view1 = big_k_view.block(Tkv,d_qk_,batch * Tkv,head * d_qk_);
 
         apply_RoPE(q_view,q_view1,training);
         apply_RoPE(k_view,k_view1,training);
@@ -233,7 +236,7 @@ struct Attention : ILayer{
 
         //std::cout << "before matmul_impl(rec_sqrt_d,q_view,k_view.t(),0,scores_view)" << std::endl;
 
-        tensor::MatrixView::matmul_impl(rec_sqrt_d,q_view,k_view.t(),0,scores_view);
+        tensor::MatrixView::matmul_impl(rec_sqrt_d,q_view,k_view.t(),0.0f,scores_view);
 
         //std::cout << "compute_scores end" << std::endl;
       }
@@ -272,6 +275,8 @@ struct Attention : ILayer{
           causal_mask_col_ends_[row] = cache_.value().get_current_len() - weights_.dim(2) + row + 1;
         }
       }
+    }else{
+      std::fill(causal_mask_col_ends_.begin(),causal_mask_col_ends_.end(),scores_.dim(3));
     }
 
     for(int64_t batch = 0;batch < weights_.dim(0);batch++){
@@ -309,7 +314,7 @@ struct Attention : ILayer{
   }
 
   //weights_ @ V
-  void compute_output(const tensor::ConstMatrixView big_v_view){
+  void compute_output(const tensor::ConstMatrixView big_v_view,const int64_t Tkv){
     std::vector<int64_t> weights_dim = {0,0};
 
     for(int64_t batch = 0;batch < input_ptr_->shape()[0];batch++){
@@ -321,49 +326,40 @@ struct Attention : ILayer{
         weights_dim[1] = head;
         const tensor::ConstMatrixView weights_view = weights_.as_matrix_view(weights_dim);
 
-        const tensor::ConstMatrixView v_view = big_v_view.block(big_v_view.numel() / input_ptr_->dim(0) / big_v_view.cols(),d_v_,
-          batch * big_v_view.numel() / big_v_view.cols() / input_ptr_->dim(0),head * d_v_);
+        const tensor::ConstMatrixView v_view = big_v_view.block(Tkv,d_v_,batch * Tkv,head * d_v_);
 
         tensor::MatrixView output_view = output_.unsafe_matrix_view(output_.dim(1),d_v_,output_.dim(2),1,output_.stride()[0] * batch + head * d_v_);
 
-        static int64_t count = 0;
+        /*static int64_t count = 0;
         if(count % 1024 == 0){
           //std::cout << "v_view" << v_view.to_string();
           //std::cout << "weights_view" << weights_view.to_string();
           //std::cout << "output_view" << output_view.to_string();
         }
-        count++;
+        count++;*/
 
         tensor::MatrixView::matmul(weights_view,v_view,output_view);
-
       }
     }
   }
 
   //条件によりcontext_,weights_,output_,sum_weights_,max_weights_再確保
-  void forward_ensure_shape(int64_t q_rows,int64_t k_rows){
-    if(k_rows != scores_.shape()[3] || scores_.shape()[2] != q_rows || input_ptr_->shape()[0] != scores_.shape()[0] || scores_.shape()[1] != num_heads_){
-      scores_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,q_rows,k_rows});
-      weights_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,q_rows,k_rows});
+  void forward_ensure_shape(const int64_t Tq,const int64_t Tkv){
+    if(Tkv != scores_.shape()[3] || scores_.shape()[2] != Tq || input_ptr_->shape()[0] != scores_.shape()[0] || scores_.shape()[1] != num_heads_){
+      scores_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,Tq,Tkv});
+      weights_ = tensor::Tensor({input_ptr_->shape()[0],num_heads_,Tq,Tkv});
     }else{
       std::fill(weights_.data(),weights_.data() + weights_.numel(),0.0f);
-      std::fill(scores_.data(),scores_.data() + scores_.numel(),0.0f);
     }
 
     if(output_.shape()[1] != input_ptr_->shape()[1] || output_.shape()[0] != input_ptr_->shape()[0] || output_.shape()[2] != num_heads_ * d_v_){
       output_ = tensor::Tensor({input_ptr_->shape()[0],input_ptr_->shape()[1],num_heads_ * d_v_});
-    }else{
-      std::fill(output_.data(),output_.data() + output_.numel(),0.0f);
     }
 
     if(sum_weights_.size() != scores_.dim(2) || sum_weights_.size() != max_weights_.size() || sum_weights_.size() != causal_mask_col_ends_.size()){
       sum_weights_ = std::vector<double>(scores_.dim(2));
       max_weights_ = std::vector<float>(scores_.dim(2));
       causal_mask_col_ends_ = std::vector<int64_t>(scores_.dim(2));
-    }else{
-      std::fill(sum_weights_.begin(),sum_weights_.end(),0.0f);
-      std::fill(max_weights_.begin(),max_weights_.end(),0.0f);
-      std::fill(causal_mask_col_ends_.begin(),causal_mask_col_ends_.end(),scores_.dim(3));
     }
   }
 
@@ -376,40 +372,44 @@ struct Attention : ILayer{
   const tensor::Tensor& backward(const tensor::Tensor& grad_output) override{
     backward_ensure_shape();
 
-    const tensor::ConstMatrixView big_q_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,0);
-    const tensor::ConstMatrixView big_k_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,k_offset_);
-    const tensor::ConstMatrixView big_v_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_v_ * num_heads_,qkv_->dim(2),1,v_offset_);
+    const int64_t big_qkv_rows = qkv_->dim(0) * qkv_->dim(1);//TensorViewが無いため
 
-    tensor::MatrixView big_d_q_view = d_qkv_.unsafe_matrix_view(d_qkv_.dim(0) * d_qkv_.dim(1),d_qk_ * num_heads_,d_qkv_.dim(2),1,0);
-    tensor::MatrixView big_d_k_view = d_qkv_.unsafe_matrix_view(d_qkv_.dim(0) * d_qkv_.dim(1),d_qk_ * num_heads_,d_qkv_.dim(2),1,k_offset_);
-    tensor::MatrixView big_d_v_view = d_qkv_.unsafe_matrix_view(d_qkv_.dim(0) * d_qkv_.dim(1),d_v_ * num_heads_,d_qkv_.dim(2),1,v_offset_);
+    const tensor::ConstMatrixView big_q_view = qkv_->unsafe_matrix_view(big_qkv_rows,d_qk_ * num_heads_,qkv_->dim(2),1,q_offset_);
+    const tensor::ConstMatrixView big_k_view = qkv_->unsafe_matrix_view(big_qkv_rows,d_qk_ * num_heads_,qkv_->dim(2),1,k_offset_);
+    const tensor::ConstMatrixView big_v_view = qkv_->unsafe_matrix_view(big_qkv_rows,d_v_ * num_heads_,qkv_->dim(2),1,v_offset_);
 
-    d_compute_output(grad_output,big_v_view,big_d_v_view);
+    tensor::MatrixView big_d_q_view = d_qkv_.unsafe_matrix_view(big_qkv_rows,d_qk_ * num_heads_,d_qkv_.dim(2),1,q_offset_);
+    tensor::MatrixView big_d_k_view = d_qkv_.unsafe_matrix_view(big_qkv_rows,d_qk_ * num_heads_,d_qkv_.dim(2),1,k_offset_);
+    tensor::MatrixView big_d_v_view = d_qkv_.unsafe_matrix_view(big_qkv_rows,d_v_ * num_heads_,d_qkv_.dim(2),1,v_offset_);
 
-for(int i = 0;i < d_weights_.numel();i++){
+    const int64_t Tqkv = input_ptr_->dim(1);//Q,K,Vの系列長
+
+    d_compute_output(grad_output,big_v_view,big_d_v_view,Tqkv);
+
+/*for(int i = 0;i < d_weights_.numel();i++){
   if(!std::isfinite(d_weights_.data()[i])){
     std::cout << "d_weights nan\n";
     std::abort();
   }
-}
+}*/
 
     d_compute_weights();
 
     //d_scores_ = d_weights_;
 
-for(int i = 0;i < d_scores_.numel();i++){
+/*for(int i = 0;i < d_scores_.numel();i++){
   if(!std::isfinite(d_scores_.data()[i])){
     std::cout << "d_scores nan\n";
     std::abort();
   }
-}
+}*/
 
-    d_compute_scores(big_q_view,big_k_view,big_d_q_view,big_d_k_view);
+    d_compute_scores(big_q_view,big_k_view,big_d_q_view,big_d_k_view,Tqkv);
 
     return qkv_linear_.backward(d_qkv_);
   }
 
-  void d_compute_output(const tensor::Tensor& grad_output,const tensor::ConstMatrixView big_v_view,tensor::MatrixView big_d_v_view){
+  void d_compute_output(const tensor::Tensor& grad_output,const tensor::ConstMatrixView big_v_view,tensor::MatrixView big_d_v_view,const int64_t Tqkv){
     std::vector<int64_t> weights_dim = {0,0};
 
     for(int64_t batch = 0;batch < input_ptr_->shape()[0];batch++){
@@ -422,11 +422,9 @@ for(int i = 0;i < d_scores_.numel();i++){
 
         tensor::MatrixView dw_view = d_weights_.as_matrix_view(weights_dim);
 
-        const tensor::ConstMatrixView v_view = big_v_view.block(big_v_view.numel() / input_ptr_->dim(0) / big_v_view.cols(),d_v_,
-          batch * big_v_view.numel() / big_v_view.cols() / input_ptr_->dim(0),head * d_v_);
+        const tensor::ConstMatrixView v_view = big_v_view.block(Tqkv,d_v_,batch * Tqkv,head * d_v_);
 
-        tensor::MatrixView d_v_view = big_d_v_view.block(big_d_v_view.numel() / input_ptr_->dim(0) / big_d_v_view.cols(),d_v_,
-          batch * big_d_v_view.numel() / big_d_v_view.cols() / input_ptr_->dim(0),head * d_v_);
+        tensor::MatrixView d_v_view = big_d_v_view.block(Tqkv,d_v_,batch * Tqkv,head * d_v_);
 
         const tensor::ConstMatrixView grad_output_view = grad_output.unsafe_matrix_view(grad_output.dim(1),d_v_,grad_output.dim(2),1,grad_output.stride()[0] * batch + head * d_v_);
 
@@ -434,7 +432,7 @@ for(int i = 0;i < d_scores_.numel();i++){
 
         tensor::MatrixView::matmul(grad_output_view,v_view.t(),dw_view);
 
-        static int64_t count = 0;
+        /*static int64_t count = 0;
         if(count % 1024 == 0){
           //std::cout << "w_view" << w_view.to_string() << std::endl;
           //std::cout << "dw_view" << dw_view.to_string() << std::endl;
@@ -459,7 +457,7 @@ for(int i = 0;i < dw_view.rows();i++){
       throw std::runtime_error("nan");
     }
   }
-}
+}*/
       }
     }
   }
@@ -481,13 +479,13 @@ for(int i = 0;i < dw_view.rows();i++){
     }
   }
 
-  void d_compute_scores(const tensor::ConstMatrixView big_q_view,const tensor::ConstMatrixView big_k_view,tensor::MatrixView big_d_q_view,tensor::MatrixView big_d_k_view){
+  void d_compute_scores(const tensor::ConstMatrixView big_q_view,const tensor::ConstMatrixView big_k_view,tensor::MatrixView big_d_q_view,tensor::MatrixView big_d_k_view,const int64_t Tqkv){
     const float rec_sqrt_d = 1.0f / std::sqrt(d_qk_);
 
     std::vector<int64_t> d_scores_dim = {0,0};
 
-    tensor::Tensor small_q({big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_});
-    tensor::Tensor small_k({big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_});
+    tensor::Tensor small_q({Tqkv,d_qk_});
+    tensor::Tensor small_k({Tqkv,d_qk_});
 
     tensor::MatrixView q_view = small_q.flatten_matrix_view();
     tensor::MatrixView k_view = small_k.flatten_matrix_view();
@@ -500,27 +498,23 @@ for(int i = 0;i < dw_view.rows();i++){
 
         tensor::MatrixView d_scores_view = d_scores_.as_matrix_view(d_scores_dim);
 
-        const tensor::ConstMatrixView q_view1 = big_q_view.block(big_q_view.numel() / input_ptr_->dim(0) / big_q_view.cols(),d_qk_,
-          batch * big_q_view.numel() / big_q_view.cols() / input_ptr_->dim(0),head * d_qk_);
+        const tensor::ConstMatrixView q_view1 = big_q_view.block(Tqkv,d_qk_,batch * Tqkv,head * d_qk_);
 
-        const tensor::ConstMatrixView k_view1 = big_k_view.block(big_k_view.numel() / input_ptr_->dim(0) / big_k_view.cols(),d_qk_,
-          batch * big_k_view.numel() / big_k_view.cols() / input_ptr_->dim(0),head * d_qk_);
+        const tensor::ConstMatrixView k_view1 = big_k_view.block(Tqkv,d_qk_,batch * Tqkv,head * d_qk_);
 
         apply_RoPE(q_view,q_view1,true);
         apply_RoPE(k_view,k_view1,true);
 
-        tensor::MatrixView d_q_view = big_d_q_view.block(big_d_q_view.numel() / input_ptr_->dim(0) / big_d_q_view.cols(),d_qk_,
-          batch * big_d_q_view.numel() / big_d_q_view.cols() / input_ptr_->dim(0),head * d_qk_);
+        tensor::MatrixView d_q_view = big_d_q_view.block(Tqkv,d_qk_,batch * Tqkv,head * d_qk_);
 
-        tensor::MatrixView d_k_view = big_d_k_view.block(big_d_k_view.numel() / input_ptr_->dim(0) / big_d_k_view.cols(),d_qk_,
-          batch * big_d_k_view.numel() / big_d_k_view.cols() / input_ptr_->dim(0),head * d_qk_);
+        tensor::MatrixView d_k_view = big_d_k_view.block(Tqkv,d_qk_,batch * Tqkv,head * d_qk_);
 
-          tensor::MatrixView::matmul_impl(rec_sqrt_d,d_scores_view.t(),q_view,0.0f,d_k_view);
+        tensor::MatrixView::matmul_impl(rec_sqrt_d,d_scores_view.t(),q_view,0.0f,d_k_view);
 
-          tensor::MatrixView::matmul_impl(rec_sqrt_d,d_scores_view,k_view,0.0f,d_q_view);
+        tensor::MatrixView::matmul_impl(rec_sqrt_d,d_scores_view,k_view,0.0f,d_q_view);
 
-          d_apply_RoPE(d_k_view);
-          d_apply_RoPE(d_q_view);
+        d_apply_RoPE(d_k_view);
+        d_apply_RoPE(d_q_view);
       }
     }
   }
@@ -550,23 +544,15 @@ for(int i = 0;i < dw_view.rows();i++){
   void backward_ensure_shape(){
     if(d_qkv_.shape() != qkv_->shape()){
       d_qkv_ = tensor::Tensor(qkv_->shape());
-    }else{
-      std::fill(d_qkv_.data(),d_qkv_.data() + d_qkv_.numel(),0.0f);
     }
-
 
     if(d_weights_.shape() != weights_.shape()){
       d_weights_ = tensor::Tensor(weights_.shape());
       d_scores_ = tensor::Tensor(weights_.shape());
-    }else{
-      std::fill(d_weights_.data(),d_weights_.data() + d_weights_.numel(),0.0f);
-      std::fill(d_scores_.data(),d_scores_.data() + d_scores_.numel(),0.0f);
     }
 
     if(sum_d_weights_.size() != d_weights_.numel() / d_weights_.dim(3)){
       sum_d_weights_ = std::vector<double>(d_weights_.numel() / d_weights_.dim(3));
-    }else{
-      std::fill(sum_d_weights_.begin(),sum_d_weights_.end(),0.0f);
     }
   }
 
