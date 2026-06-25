@@ -307,10 +307,10 @@ int main(){
 
   const float lr = 0.001f;
 
-  //em.random_init(gen);
-  //m.random_init(gen);
+  em.random_init(gen);
+  m.random_init(gen);
 
-  for(int64_t i = 0;i < 100;i++){
+  for(int64_t i = 0;i < 1000;i++){
     std::cout << "time:" << i << " ----------------------------------------" << std::endl;
 
     ids = {

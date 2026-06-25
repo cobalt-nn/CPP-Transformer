@@ -18,7 +18,7 @@ namespace cobalt_715::nn::layer{
 
 //self attention
 struct Attention : ILayer{
-  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v)
+  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v,bool causal_mask_bool = false)
     : in_size_(in),
       qkv_linear_(in,num_heads * (d_qk * 2 + d_v),true),
       num_heads_(num_heads),
@@ -32,24 +32,11 @@ struct Attention : ILayer{
       d_qkv_({1,1,1}),
       d_weights_({1,1,1,1}),
       d_scores_({1,1,1,1}),
-      causal_mask_bool_(false){}
+      causal_mask_bool_(causal_mask_bool){}
 
-  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v,int64_t kv_cache_max_length,bool causal_mask)
-    : in_size_(in),
-      qkv_linear_(in,num_heads * (d_qk * 2 + d_v),true),
-      num_heads_(num_heads),
-      d_qk_(d_qk),
-      d_v_(d_v),
-      k_offset_(d_qk * num_heads),
-      v_offset_(2 * d_qk * num_heads),
-      scores_({1,1,1,1}),
-      weights_({1,1,1,1}),
-      output_({1,1,1}),
-      d_qkv_({1,1,1}),
-      d_weights_({1,1,1,1}),
-      d_scores_({1,1,1,1}),
-      cache_(KVCache(d_qk * num_heads,d_v * num_heads,kv_cache_max_length)),
-      causal_mask_bool_(causal_mask){}
+  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v,int64_t kv_cache_max_length,bool causal_mask_bool) : Attention(in,num_heads,d_qk,d_v,causal_mask_bool){
+    cache_.emplace(d_qk * num_heads,d_v * num_heads,kv_cache_max_length);
+  }
 
   struct KVCache{
     KVCache(int64_t d_k,int64_t d_v,int64_t max_length)
@@ -135,6 +122,7 @@ struct Attention : ILayer{
   const int64_t d_qk_;//qとkのheadあたりの列数
   const int64_t d_v_;//vのheadあたりの列数
 
+  const int64_t q_offset_ = 0;//0
   const int64_t k_offset_;//d_qk_ * num_heads_
   const int64_t v_offset_;//2 * d_qk_ * num_heads_
 
@@ -155,7 +143,7 @@ struct Attention : ILayer{
 
     //std::cout << qkv_->to_string() << std::endl;
 
-    tensor::ConstMatrixView big_q_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,0);
+    tensor::ConstMatrixView big_q_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,q_offset_);
     tensor::ConstMatrixView big_k_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_qk_ * num_heads_,qkv_->dim(2),1,k_offset_);
     tensor::ConstMatrixView big_v_view = qkv_->unsafe_matrix_view(qkv_->dim(0) * qkv_->dim(1),d_v_ * num_heads_,qkv_->dim(2),1,v_offset_);
 
