@@ -301,16 +301,18 @@ int main(){
 
   std::ifstream ifs("nn/models/embmodel.bin",std::ios::binary);
 
-  em.load(ifs);
+  //em.load(ifs);
 
-  m.load_all("nn/models/model.json","nn/models/model.bin");
+  //m.load_all("nn/models/model.json","nn/models/model.bin");
 
   const float lr = 0.001f;
 
   em.random_init(gen);
   m.random_init(gen);
 
-  for(int64_t i = 0;i < 1000;i++){
+  auto now1 = std::chrono::steady_clock::now();
+
+  for(int64_t i = 0;i < 100;i++){
     std::cout << "time:" << i << " ----------------------------------------" << std::endl;
 
     ids = {
@@ -361,6 +363,10 @@ int main(){
     em.zero_grad();
     m.zero_grad();
   }
+
+  auto now2 = std::chrono::steady_clock::now();
+
+  std::cout << std::chrono::duration<double,std::milli>(now2 - now1).count() << "ms" << std::endl;
 
   //std::cout << std::filesystem::current_path() << std::endl;
 
