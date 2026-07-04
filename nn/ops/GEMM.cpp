@@ -37,14 +37,14 @@ void kernel_reg_4_4(const float*__restrict a_pack,
 
   for(int64_t i = 0;i < IB;i += 4){
     const float *adptr0 = a_pack + i * KB;
-    const float *adptr1 = adptr0 + KB;
-    const float *adptr2 = adptr1 + KB;
-    const float *adptr3 = adptr2 + KB;
+    const float *adptr1 = a_pack + (i + 1) * KB;
+    const float *adptr2 = a_pack + (i + 2) * KB;
+    const float *adptr3 = a_pack + (i + 3) * KB;
 
     float *odptr0 = out_pack + i * JB;
-    float *odptr1 = odptr0 + JB;
-    float *odptr2 = odptr1 + JB;
-    float *odptr3 = odptr2 + JB;
+    float *odptr1 = out_pack + (i + 1) * JB;
+    float *odptr2 = out_pack + (i + 2) * JB;
+    float *odptr3 = out_pack + (i + 3) * JB;
 
     for(int64_t j = 0;j < JB;j += 4){
       float o00=0,o01=0,o02=0,o03=0;
@@ -53,9 +53,9 @@ void kernel_reg_4_4(const float*__restrict a_pack,
       float o30=0,o31=0,o32=0,o33=0;
 
       const float *btdptr0 = bt_pack + j * KB;
-      const float *btdptr1 = btdptr0 + KB;
-      const float *btdptr2 = btdptr1 + KB;
-      const float *btdptr3 = btdptr2 + KB;
+      const float *btdptr1 = bt_pack + (j + 1) * KB;
+      const float *btdptr2 = bt_pack + (j + 2) * KB;
+      const float *btdptr3 = bt_pack + (j + 3) * KB;
 
       float *optr0 = odptr0 + j;
       float *optr1 = odptr1 + j;
@@ -86,6 +86,156 @@ void kernel_reg_4_4(const float*__restrict a_pack,
     }
   }
 }
+
+#if defined(__AVX2__) && defined(__FMA__)
+
+//AVX2
+//aもbもそのまま、aもbもset_pack()が前提だ。俺はみんなを信じているぞキリッ★
+void kernel_avx2(const float*__restrict a_pack,
+            const float*__restrict b_pack,
+            float*__restrict out_pack,
+            const int64_t IB,
+            const int64_t JB,
+            const int64_t KB){
+
+  /*for(int64_t i = 0;i < IB;i += 1){
+    for(int64_t j = 0;j < JB;j += 8){
+      __m256 vo0 = _mm256_setzero_ps();
+
+      for(int64_t k = 0;k < KB;k += 1){
+        __m256 va0 = _mm256_set1_ps(a_pack[i * KB + k]);
+
+        __m256 vb0 = _mm256_load_ps(&b_pack[k * JB + j]);
+
+        vo0 = _mm256_fmadd_ps(va0,vb0,vo0);
+      }
+
+      _mm256_store_ps(&out_pack[i * JB + j],vo0);
+    }
+  }*/
+
+  /*for(int64_t i = 0;i < IB;i += 8){
+    for(int64_t j = 0;j < JB;j += 8){
+      __m256 vo0 = _mm256_setzero_ps();
+      __m256 vo1 = _mm256_setzero_ps();
+      __m256 vo2 = _mm256_setzero_ps();
+      __m256 vo3 = _mm256_setzero_ps();
+      __m256 vo4 = _mm256_setzero_ps();
+      __m256 vo5 = _mm256_setzero_ps();
+      __m256 vo6 = _mm256_setzero_ps();
+      __m256 vo7 = _mm256_setzero_ps();
+
+      for(int64_t k = 0;k < KB;k += 1){
+        __m256 va0 = _mm256_set1_ps(a_pack[i * KB + k]);
+        __m256 va1 = _mm256_set1_ps(a_pack[(i + 1) * KB + k]);
+        __m256 va2 = _mm256_set1_ps(a_pack[(i + 2) * KB + k]);
+        __m256 va3 = _mm256_set1_ps(a_pack[(i + 3) * KB + k]);
+        __m256 va4 = _mm256_set1_ps(a_pack[(i + 4) * KB + k]);
+        __m256 va5 = _mm256_set1_ps(a_pack[(i + 5) * KB + k]);
+        __m256 va6 = _mm256_set1_ps(a_pack[(i + 6) * KB + k]);
+        __m256 va7 = _mm256_set1_ps(a_pack[(i + 7) * KB + k]);
+
+        __m256 vb0 = _mm256_load_ps(&b_pack[k * JB + j]);
+
+        vo0 = _mm256_fmadd_ps(va0,vb0,vo0);
+        vo1 = _mm256_fmadd_ps(va1,vb0,vo1);
+        vo2 = _mm256_fmadd_ps(va2,vb0,vo2);
+        vo3 = _mm256_fmadd_ps(va3,vb0,vo3);
+        vo4 = _mm256_fmadd_ps(va4,vb0,vo4);
+        vo5 = _mm256_fmadd_ps(va5,vb0,vo5);
+        vo6 = _mm256_fmadd_ps(va6,vb0,vo6);
+        vo7 = _mm256_fmadd_ps(va7,vb0,vo7);
+      }
+
+      _mm256_store_ps(&out_pack[i * JB + j],vo0);
+      _mm256_store_ps(&out_pack[(i + 1) * JB + j],vo1);
+      _mm256_store_ps(&out_pack[(i + 2) * JB + j],vo2);
+      _mm256_store_ps(&out_pack[(i + 3) * JB + j],vo3);
+      _mm256_store_ps(&out_pack[(i + 4) * JB + j],vo4);
+      _mm256_store_ps(&out_pack[(i + 5) * JB + j],vo5);
+      _mm256_store_ps(&out_pack[(i + 6) * JB + j],vo6);
+      _mm256_store_ps(&out_pack[(i + 7) * JB + j],vo7);
+    }
+  }*/
+
+  for(int64_t i = 0;i < IB;i += 4){
+    for(int64_t j = 0;j < JB;j += 32){
+      __m256 vo00 = _mm256_setzero_ps();
+      __m256 vo01 = _mm256_setzero_ps();
+      __m256 vo02 = _mm256_setzero_ps();
+      __m256 vo03 = _mm256_setzero_ps();
+
+      __m256 vo10 = _mm256_setzero_ps();
+      __m256 vo11 = _mm256_setzero_ps();
+      __m256 vo12 = _mm256_setzero_ps();
+      __m256 vo13 = _mm256_setzero_ps();
+
+      __m256 vo20 = _mm256_setzero_ps();
+      __m256 vo21 = _mm256_setzero_ps();
+      __m256 vo22 = _mm256_setzero_ps();
+      __m256 vo23 = _mm256_setzero_ps();
+
+      __m256 vo30 = _mm256_setzero_ps();
+      __m256 vo31 = _mm256_setzero_ps();
+      __m256 vo32 = _mm256_setzero_ps();
+      __m256 vo33 = _mm256_setzero_ps();
+
+      for(int64_t k = 0;k < KB;k += 1){
+        __m256 va0 = _mm256_set1_ps(a_pack[i * KB + k]);
+        __m256 va1 = _mm256_set1_ps(a_pack[(i + 1) * KB + k]);
+        __m256 va2 = _mm256_set1_ps(a_pack[(i + 2) * KB + k]);
+        __m256 va3 = _mm256_set1_ps(a_pack[(i + 3) * KB + k]);
+
+        __m256 vb0 = _mm256_load_ps(&b_pack[k * JB + j]);
+        __m256 vb1 = _mm256_load_ps(&b_pack[k * JB + j + 8]);
+        __m256 vb2 = _mm256_load_ps(&b_pack[k * JB + j + 16]);
+        __m256 vb3 = _mm256_load_ps(&b_pack[k * JB + j + 24]);
+
+        vo00 = _mm256_fmadd_ps(va0,vb0,vo00);
+        vo01 = _mm256_fmadd_ps(va1,vb0,vo01);
+        vo02 = _mm256_fmadd_ps(va2,vb0,vo02);
+        vo03 = _mm256_fmadd_ps(va3,vb0,vo03);
+
+        vo10 = _mm256_fmadd_ps(va0,vb1,vo10);
+        vo11 = _mm256_fmadd_ps(va1,vb1,vo11);
+        vo12 = _mm256_fmadd_ps(va2,vb1,vo12);
+        vo13 = _mm256_fmadd_ps(va3,vb1,vo13);
+
+        vo20 = _mm256_fmadd_ps(va0,vb2,vo20);
+        vo21 = _mm256_fmadd_ps(va1,vb2,vo21);
+        vo22 = _mm256_fmadd_ps(va2,vb2,vo22);
+        vo23 = _mm256_fmadd_ps(va3,vb2,vo23);
+
+        vo30 = _mm256_fmadd_ps(va0,vb3,vo30);
+        vo31 = _mm256_fmadd_ps(va1,vb3,vo31);
+        vo32 = _mm256_fmadd_ps(va2,vb3,vo32);
+        vo33 = _mm256_fmadd_ps(va3,vb3,vo33);
+      }
+
+      _mm256_store_ps(&out_pack[i * JB + j],vo00);
+      _mm256_store_ps(&out_pack[(i + 1) * JB + j],vo01);
+      _mm256_store_ps(&out_pack[(i + 2) * JB + j],vo02);
+      _mm256_store_ps(&out_pack[(i + 3) * JB + j],vo03);
+
+      _mm256_store_ps(&out_pack[i * JB + j + 8],vo10);
+      _mm256_store_ps(&out_pack[(i + 1) * JB + j + 8],vo11);
+      _mm256_store_ps(&out_pack[(i + 2) * JB + j + 8],vo12);
+      _mm256_store_ps(&out_pack[(i + 3) * JB + j + 8],vo13);
+
+      _mm256_store_ps(&out_pack[i * JB + j + 16],vo20);
+      _mm256_store_ps(&out_pack[(i + 1) * JB + j + 16],vo21);
+      _mm256_store_ps(&out_pack[(i + 2) * JB + j + 16],vo22);
+      _mm256_store_ps(&out_pack[(i + 3) * JB + j + 16],vo23);
+
+      _mm256_store_ps(&out_pack[i * JB + j + 24],vo30);
+      _mm256_store_ps(&out_pack[(i + 1) * JB + j + 24],vo31);
+      _mm256_store_ps(&out_pack[(i + 2) * JB + j + 24],vo32);
+      _mm256_store_ps(&out_pack[(i + 3) * JB + j + 24],vo33);
+    }
+  }
+}
+
+#endif
 
 //パックする
 inline void set_pack(const tensor::ConstMatrixView &m,
@@ -176,7 +326,7 @@ void gemm_impl(const float alpha,const tensor::ConstMatrixView &a,const tensor::
   const int64_t out_col_stride = out.col_stride();
 
   alignas(64) float a_pack[IB * KB];
-  alignas(64) float bt_pack[JB * KB];
+  alignas(64) float b_pack[JB * KB];
   alignas(64) float out_pack[IB * JB];
 
   const int64_t ii_end = (out.rows() / IB) * IB;
@@ -197,11 +347,13 @@ void gemm_impl(const float alpha,const tensor::ConstMatrixView &a,const tensor::
 
   for(int64_t kk = 0;kk < kk_end;kk += KB){//kk + KB <= acols
     for(int64_t jj = 0;jj < jj_end;jj += JB){//jj + JB <= ocols
-      set_pack(bt,jj,kk,JB,KB,bt_pack);
+      set_pack(b,kk,jj,KB,JB,b_pack);
+      //set_pack(bt,jj,kk,JB,KB,b_pack);
+
       for(int64_t ii = 0;ii < ii_end;ii += IB){
         set_pack(a,ii,kk,IB,KB,a_pack);
 
-        kernel_reg_4_4(a_pack,bt_pack,out_pack,IB,JB,KB);
+        kernel_avx2(a_pack,b_pack,out_pack,IB,JB,KB);
 
         if(kk == 0){
           write_out<true>(alpha,beta,out,ii,jj,IB,JB,out_pack);
