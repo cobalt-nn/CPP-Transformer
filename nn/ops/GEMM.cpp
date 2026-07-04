@@ -347,13 +347,20 @@ void gemm_impl(const float alpha,const tensor::ConstMatrixView &a,const tensor::
 
   for(int64_t kk = 0;kk < kk_end;kk += KB){//kk + KB <= acols
     for(int64_t jj = 0;jj < jj_end;jj += JB){//jj + JB <= ocols
-      set_pack(b,kk,jj,KB,JB,b_pack);
-      //set_pack(bt,jj,kk,JB,KB,b_pack);
+      #if defined(__AVX2__) && defined(__FMA__)
+        set_pack(b,kk,jj,KB,JB,b_pack);
+      #else
+        set_pack(bt,jj,kk,JB,KB,b_pack);
+      #endif
 
       for(int64_t ii = 0;ii < ii_end;ii += IB){
         set_pack(a,ii,kk,IB,KB,a_pack);
 
-        kernel_avx2(a_pack,b_pack,out_pack,IB,JB,KB);
+        #if defined(__AVX2__) && defined(__FMA__)
+          kernel_avx2(a_pack,b_pack,out_pack,IB,JB,KB);
+        #else
+          kernel_reg_4_4(a_pack,b_pack,out_pack,IB,JB,KB);
+        #endif
 
         if(kk == 0){
           write_out<true>(alpha,beta,out,ii,jj,IB,JB,out_pack);
