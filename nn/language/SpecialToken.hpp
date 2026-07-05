@@ -2,8 +2,9 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
 
-namespace cobalt_715::nn::token{
+namespace cobalt_715::nn::language::token{
 
 inline constexpr std::string PAD = "<pad>";
 inline constexpr std::string UNK = "<unk>";
@@ -28,4 +29,4 @@ inline const std::vector<std::string> stokens =
     SYSTEM
   };
 
-}//namespace cobalt_715::nn::token
+}//namespace cobalt_715::nn::language::tolen

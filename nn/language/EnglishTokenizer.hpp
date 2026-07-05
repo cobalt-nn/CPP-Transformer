@@ -10,31 +10,17 @@
 #include <cstddef>
 #include "SpecialToken.hpp"
 
-namespace cobalt_715::nn{
+namespace cobalt_715::nn::language{
 
 struct EnglishTokenizer{
-  std::vector<std::string> format(const std::string_view text,const int64_t max_len,bool end_eos=false,const bool add_pad=true) const{
-    std::vector<std::string> tokens = {token::BOS};
+  std::vector<std::string> format(const std::string_view text,const int64_t max_len) const{
+    std::vector<std::string> tokens = tokenize(text);
 
-    std::vector<std::string> t = tokenize(text);
-
-    bool add_eos = false;
-
-    for(int64_t i = 0;i + 1 < max_len;i++){
-      if(i < t.size()){
-        if(end_eos && i + 2 == max_len){
-          tokens.push_back(token::EOS);
-          add_eos = true;
-        }else{
-          tokens.push_back(t[i]);
-        }
-      }else if(!add_eos){
-        tokens.push_back(token::EOS);
-        add_eos = true;
-      }else if(add_pad){
-        tokens.push_back(token::PAD);
-      }
+    while(tokens.size() < max_len){
+      tokens.push_back(token::PAD);
     }
+
+    tokens.resize(max_len);
 
     return tokens;
   }
@@ -147,6 +133,7 @@ struct EnglishTokenizer{
     return tokens;
   }
 
+  //tokenizeした結果をstringに戻す
   std::string detokenize(const std::vector<std::string> &tokens) const{
     std::string text;
     bool cap = false;
@@ -556,4 +543,4 @@ private:
   };
 };
 
-}//namespace cobalt_715::nn
+}//namespace cobalt_715::nn::language

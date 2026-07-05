@@ -6,15 +6,17 @@
 #include <random>
 #include <unordered_map>
 #include "SpecialToken.hpp"
-#include "tensor/Tensor.hpp"
+#include "nn/tensor/Tensor.hpp"
+#include "nlohmann/json.hpp"
 
-namespace cobalt_715::nn{
+namespace cobalt_715::nn::language{
 
 struct Vocabulary{
   Vocabulary(){
     add(token::stokens);
   }
 
+  //語彙数
   int64_t size() const{
     return static_cast<int64_t>(itos_.size());
   }
@@ -39,6 +41,7 @@ struct Vocabulary{
     }
   }
 
+  //id[]をstring[]に変換する
   std::vector<std::string> itos(const std::vector<int64_t> &ids) const{
     std::vector<std::string> tokens;
     tokens.reserve(ids.size());
@@ -50,6 +53,7 @@ struct Vocabulary{
     return tokens;
   }
 
+  //string[]からid[]に変換する
   std::vector<int64_t> stoi(const std::vector<std::string> &tokens) const{
     std::vector<int64_t> ids;
     ids.reserve(tokens.size());
@@ -111,9 +115,25 @@ struct Vocabulary{
     return idss;
   }
 
+  //語彙をjsonにする
+  nlohmann::ordered_json to_json() const{
+    nlohmann::ordered_json j;
+
+    j["itos"] = itos_;
+
+    return j;
+  }
+
+  void load_json(const nlohmann::ordered_json j){
+    itos_.clear();
+    stoi_.clear();
+
+    add(j["itos"].get<std::vector<std::string>>());
+  }
+
 private:
   std::vector<std::string> itos_;
   std::unordered_map<std::string,int64_t> stoi_;
 };
 
-}//namespace cobalt_715::nn
+}//namespace cobalt_715::nn::language

@@ -32,10 +32,11 @@
 #include "nn/io/BinaryIO.hpp"
 
 #include "nn/Model.hpp"
-#include "nn/EnglishTokenizer.hpp"
-#include "nn/Vocabulary.hpp"
-#include "nn/Embedding.hpp"
-#include "nn/SpecialToken.hpp"
+#include "nn/language/EnglishTokenizer.hpp"
+#include "nn/language/Vocabulary.hpp"
+#include "nn/language/Embedding.hpp"
+#include "nn/language/SpecialToken.hpp"
+#include "nn/language/Language.hpp"
 
 #include "data/MNISTLoader.hpp"
 
@@ -43,85 +44,26 @@
 
 using namespace cobalt_715::nn;
 
-std::vector<float> makeTenVector(int i){
-  std::vector<float> v(10);
-  v.at(i) = 1;
-  return v;
-}
-
 int main(){
-  Model m;
+  language::Language lang;
 
-  m.add<layer::Dense>(784,256)
-   .add<layer::Dense>(256,64)
-   .add<layer::Dense>(64,10);
+  lang.load_all("nn/models/Test.json","nn/models/Test.bin");
 
-  const size_t MNIST_size = 60000;
+  //lang.add("I'll be back.Transformer Attention Is All You Need I have an apple.");
 
-  const size_t batch_size = 32;
+  language::EnglishTokenizer et;
 
-  std::vector<float> images;
-  std::vector<float> labels;
+  //lang.build(lang.size(),8);
 
-  std::vector<tensor::Tensor> input;
-  std::vector<tensor::Tensor> target;
+  std::cout << lang.to_json().dump(2) << std::endl;
 
-  MNISTLoader mnist("data/train-images.idx3-ubyte", "data/train-labels.idx1-ubyte");
-
-  for(size_t i = 0;i < MNIST_size;i += batch_size){
-    images.clear();
-    labels.clear();
-    for(size_t j = i;j < std::min(i + batch_size,MNIST_size);j++){
-      for(float f:mnist.getImage(j)){
-        images.push_back(f);
-      }
-      for(float f:makeTenVector(mnist.getLabel(j))){
-        labels.push_back(f);
-      }
-    }
-    input.push_back(tensor::Tensor({static_cast<int64_t>(std::min(batch_size,MNIST_size - i)),784},images));
-    target.push_back(tensor::Tensor({static_cast<int64_t>(std::min(batch_size,MNIST_size - i)),10},labels));
+  for(auto s:et.format("I'll be back",16)){
+    std::cout << s << std::endl;
   }
 
-  std::mt19937 gen(0);
+  std::cout << lang.forward({"I'll be back"},16).to_string() << std::endl;
 
-  m.random_init(gen);
-
-  const float lr = 0.01;
-
-  auto start = std::chrono::high_resolution_clock::now();
-
-  for(size_t i = 0;i < input.size();i++){
-    const tensor::Tensor &output = m.forward(input[i]);
-    m.backward(output - target[i]);
-
-    m.step(lr);
-
-    m.zero_grad();
-  }
-
-  auto end = std::chrono::high_resolution_clock::now();
-
-  auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-
-  std::cout << "time: " << time << "ms\n";
-
-  double total_loss = 0.0;
-  int correct = 0;
-  size_t total = input.size();
-
-  for(size_t i = 0;i < total;i++){
-    const tensor::Tensor output = m.forward(input[i]);
-
-    tensor::Tensor t = output - target[i];
-    t.hadamard_(t);
-
-    for(float f:t.span()){
-      total_loss += f;
-    }
-  }
-
-  std::cout << total_loss << std::endl;
+  lang.save_all("nn/models/Test.json","nn/models/Test.bin");
 
   return 0;
 }

@@ -4,23 +4,26 @@
 #include <vector>
 #include <cstdint>
 #include <random>
-#include "tensor/Tensor.hpp"
-#include "io/BinaryIO.hpp"
+#include "nn/tensor/Tensor.hpp"
+#include "nn/io/BinaryIO.hpp"
+#include "nlohmann/json.hpp"
 
-namespace cobalt_715::nn{
+namespace cobalt_715::nn::language{
 
 struct Embedding{
   Embedding(int64_t token_len,int64_t dim)
-    : W_({token_len,dim}),
-      dW_({token_len,dim}),
-      out_({1,1,1}){
+  : W_({token_len,dim}),
+    dW_({token_len,dim}),
+    out_({1,1,1}){
 
-      /*for(int64_t i = 0;i < W_.numel();i++){
-        W_.data()[i] = i;
-      }
-
-      std::cout << W_.to_string() << std::endl;*/
+    /*for(int64_t i = 0;i < W_.numel();i++){
+      W_.data()[i] = i;
     }
+
+    std::cout << W_.to_string() << std::endl;*/
+  }
+
+  Embedding(const nlohmann::ordered_json &j) : Embedding(j["token_len"],j["dim"]){}
 
   const tensor::Tensor& forward(const std::vector<std::vector<int64_t>> ids,bool training=true){
     for(const std::vector<int64_t> &v:ids){
@@ -75,6 +78,15 @@ struct Embedding{
     }
   }
 
+  nlohmann::ordered_json to_json() const{
+    nlohmann::ordered_json j;
+
+    j["token_len"] = W_.dim(0);
+    j["dim"] = W_.dim(1);
+
+    return j;
+  }
+
   void save(std::ostream &os) const{
     io::save(os,W_.data(),W_.numel());
   }
@@ -90,4 +102,4 @@ struct Embedding{
   std::vector<std::vector<int64_t>> ids_;
 };
 
-}//namespace cobalt_715::nn
+}//namespace cobalt_715::nn::language
