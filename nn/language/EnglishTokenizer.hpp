@@ -9,24 +9,25 @@
 #include <algorithm>
 #include <cstddef>
 #include "SpecialToken.hpp"
+#include "Tokens.hpp"
 
 namespace cobalt_715::nn::language{
 
 struct EnglishTokenizer{
-  std::vector<std::string> format(const std::string_view text,const int64_t max_len) const{
-    std::vector<std::string> tokens = tokenize(text);
+  Tokens format(const std::string_view text,const int64_t max_len) const{
+    Tokens tokens = tokenize(text);
 
-    while(tokens.size() < max_len){
-      tokens.push_back(token::PAD);
+    while(tokens.v_.size() < max_len){
+      tokens.v_.push_back(token::PAD);
     }
 
-    tokens.resize(max_len);
+    tokens.v_.resize(max_len);
 
-    return tokens;
+    return Tokens(tokens);
   }
 
   //stringをtokenに分解
-  std::vector<std::string> tokenize(const std::string_view text) const{
+  Tokens tokenize(const std::string_view text) const{
     std::vector<std::string> tokens;
 
     size_t be = 0;
@@ -130,11 +131,13 @@ struct EnglishTokenizer{
       be = next_be;
     }
 
-    return tokens;
+    return Tokens(tokens);
   }
 
   //tokenizeした結果をstringに戻す
-  std::string detokenize(const std::vector<std::string> &tokens) const{
+  std::string detokenize(const Tokens &ts) const{
+    const std::vector<std::string> &tokens = ts.v_;
+
     std::string text;
     bool cap = false;
     bool all_cap = false;

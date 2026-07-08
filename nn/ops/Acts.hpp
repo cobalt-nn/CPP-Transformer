@@ -20,7 +20,11 @@ private:
       addAct(activations::tanh);
       addAct(activations::ReLU);
       addAct(activations::LeakyReLU);
+      addAct(activations::SiLU);
+      addAct(activations::GELU);
       addAct(activations::Straight_Through_Estimator);
+      addAct(activations::square);
+      addAct(activations::cube);
       return true;
     }();
   }

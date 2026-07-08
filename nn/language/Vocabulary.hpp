@@ -6,6 +6,7 @@
 #include <random>
 #include <unordered_map>
 #include "SpecialToken.hpp"
+#include "Tokens.hpp"
 #include "nn/tensor/Tensor.hpp"
 #include "nlohmann/json.hpp"
 
@@ -31,8 +32,8 @@ struct Vocabulary{
     return s;
   }
 
-  void add(const std::vector<std::string> &tokens){
-    for(const std::string &s:tokens){
+  void add(const Tokens &tokens){
+    for(const std::string &s:tokens.v_){
       if(stoi_.contains(s)){
         continue;
       }
@@ -41,8 +42,8 @@ struct Vocabulary{
     }
   }
 
-  //id[]をstring[]に変換する
-  std::vector<std::string> itos(const std::vector<int64_t> &ids) const{
+  //id[]をTokensに変換する
+  Tokens itos(const std::vector<int64_t> &ids) const{
     std::vector<std::string> tokens;
     tokens.reserve(ids.size());
 
@@ -50,11 +51,13 @@ struct Vocabulary{
       tokens.push_back(itos_.at(id));
     }
 
-    return tokens;
+    return Tokens(tokens);
   }
 
-  //string[]からid[]に変換する
-  std::vector<int64_t> stoi(const std::vector<std::string> &tokens) const{
+  //Tokensからid[]に変換する
+  std::vector<int64_t> stoi(const Tokens &ts) const{
+    const std::vector<std::string> &tokens = ts.v_;
+
     std::vector<int64_t> ids;
     ids.reserve(tokens.size());
 

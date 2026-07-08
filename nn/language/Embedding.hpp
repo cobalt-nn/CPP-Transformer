@@ -69,7 +69,7 @@ struct Embedding{
   }
 
   void random_init(std::mt19937 &gen){
-    std::uniform_real_distribution<float> dist(0,0.02f);
+    std::uniform_real_distribution<float> dist(-0.02f,0.02f);
 
     float *Wd = W_.data();
 

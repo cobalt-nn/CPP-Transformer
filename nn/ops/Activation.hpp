@@ -56,6 +56,38 @@ inline const Activation LeakyReLU{
   }
 };
 
+inline const Activation SiLU{
+  "SiLU",
+  [](float x){
+    return x * Sigmoid.act_(x);
+  },
+  [](float z,float a){
+    float s = Sigmoid.act_(z);
+    return s + z * s * (1.0f - s);
+  }
+};
+
+inline const Activation GELU{
+  "GELU",
+  [](float x){
+    constexpr float magic = std::sqrt(2.0f / std::numbers::pi_v<float>);
+
+    return 0.5f * x * (1.0f + std::tanh(magic * (x + 0.044715f * x * x * x)));
+  },
+  [](float z,float a){
+    constexpr float magic = std::sqrt(2.0f / std::numbers::pi_v<float>);
+
+    float u = magic * (z + 0.044715f * z * z * z);
+    float tanhy = std::tanh(u);
+
+    return 0.5f * (
+      1.0f + tanhy
+      + z * (1.0f - tanhy * tanhy)
+      * magic * (1.0f + 0.134145f * z * z)
+    );
+  }
+};
+
 inline const Activation Straight_Through_Estimator{
   "Straight_Through_Estimator",
   [](float x){
@@ -63,6 +95,26 @@ inline const Activation Straight_Through_Estimator{
   },
   [](float z,float a){
     return 1.0f;
+  }
+};
+
+inline const Activation square{
+  "square",
+  [](float x){
+    return x * x;
+  },
+  [](float z,float a){
+    return z + z;
+  }
+};
+
+inline const Activation cube{
+  "cube",
+  [](float x){
+    return x * x * x;
+  },
+  [](float z,float a){
+    return 2.0f * z * z;
   }
 };
 

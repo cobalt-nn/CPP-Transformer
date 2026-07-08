@@ -4,10 +4,12 @@
 #include <cstdint>
 #include <optional>
 #include <cstddef>
+#include <random>
 #include "EnglishTokenizer.hpp"
 #include "Vocabulary.hpp"
 #include "Embedding.hpp"
 #include "SpecialToken.hpp"
+#include "Tokens.hpp"
 #include "nn/tensor/Tensor.hpp"
 #include "nlohmann/json.hpp"
 
@@ -18,21 +20,76 @@ struct Language{
   Vocabulary voc;
   std::optional<Embedding> emb = std::nullopt;
 
-  const tensor::Tensor& forward(const std::vector<std::string> &tokens,const int64_t max_len,bool training=true){
-    std::vector<std::vector<std::string>> ts;
-
-    for(const std::string &s:tokens){
-      ts.push_back(et.format(s,max_len));
-    }
-
-    return forward(ts,training);
+  //formatされたtokenize
+  //トークン数を指定できる
+  Tokens format(const std::string_view text,const int64_t max_len) const{
+    return et.format(text,max_len);
   }
 
-  //tokenize済みのものを受け取る
-  const tensor::Tensor& forward(const std::vector<std::vector<std::string>> &tokens,bool training=true){
+  //stringをtokenに分解
+  Tokens tokenize(const std::string_view text) const{
+    return et.tokenize(text);
+  }
+
+  //tokenizeした結果をstringに戻す
+  std::string detokenize(const Tokens &tokens) const{
+    return et.detokenize(tokens);
+  }
+
+  //id[]をTokensに変換する
+  Tokens itos(const std::vector<int64_t> &ids) const{
+    return voc.itos(ids);
+  }
+
+  //Tokensからid[]に変換する
+  std::vector<int64_t> stoi(const Tokens &ts) const{
+    return voc.stoi(ts);
+  }
+
+  Tokens make_target(Tokens tokens){
+    tokens.v_.erase(tokens.v_.begin());
+
+    tokens.v_.push_back(token::PAD);
+
+    return tokens;
+  }
+
+  //仮　まじで
+  tensor::Tensor make_grad(tensor::Tensor output,const std::vector<std::string> &texts,float &loss,float &conf){
+    std::vector<std::vector<int64_t>> id;
+    loss = 0.0f;
+    conf = 0.0f;
+
+    for(const std::string &s:texts){
+      id.push_back(stoi(make_target(format(s,output.dim(1)))));
+    }
+
+    for(int64_t batch = 0;batch < output.dim(0);batch++){
+      for(int64_t row = 0;row < output.dim(1);row++){
+        loss -= std::log(output.at({batch,row,id.at(batch).at(row)}));
+        conf += output.at({batch,row,id.at(batch).at(row)});
+
+        output.at({batch,row,id.at(batch).at(row)}) -= 1.0f;
+      }
+    }
+
+    loss /= output.dim(0) * (output.dim(1));
+    conf /= output.dim(0) * (output.dim(1));
+
+    return output;
+  }
+
+  //tokenize前のものを受け取る
+  const tensor::Tensor& forward(const std::vector<std::string> &texts,const int64_t max_len,bool training=true){
+    std::vector<std::vector<std::string>> ts;
+
+    for(const std::string &s:texts){
+      ts.push_back(et.format(s,max_len).v_);
+    }
+
     std::vector<std::vector<int64_t>> ids;
 
-    for(const std::vector<std::string> &s:tokens){
+    for(const std::vector<std::string> &s:ts){
       ids.push_back(voc.stoi(s));
     }
 
@@ -47,13 +104,21 @@ struct Language{
     emb.value().backward(grad_output);
   }
 
-  //トークン登録
-  void add(const std::string &s){
-    voc.add(et.tokenize(s));
+  void step(float lr,int batch_size=64){
+    if(!emb) throw std::runtime_error("Language::step emb is nullopt");
+
+    emb.value().step(lr,batch_size);
   }
 
-  void add(const std::vector<std::string> &s){
-    voc.add(s);
+  void zero_grad(){
+    if(!emb) throw std::runtime_error("Language::zero_grad emb is nullopt");
+
+    emb.value().zero_grad();
+  }
+
+  //トークン登録
+  void add(const std::string_view s){
+    voc.add(et.tokenize(s));
   }
 
   //Embedding初期化。トークン数が分からないため
@@ -64,6 +129,32 @@ struct Language{
   //語彙数
   int64_t size() const{
     return voc.size();
+  }
+
+  std::vector<std::string> argmax(const tensor::Tensor &t){
+    std::vector<std::string> ts;
+
+    for(const std::vector<int64_t> v:voc.argmax(t)){
+      ts.push_back(detokenize(itos(v)));
+    }
+
+    return ts;
+  }
+
+  std::vector<std::string> sample(const tensor::Tensor &t,std::mt19937 &gen){
+    std::vector<std::string> ts;
+
+    for(const std::vector<int64_t> v:voc.sample(t,gen)){
+      ts.push_back(detokenize(itos(v)));
+    }
+
+    return ts;
+  }
+
+  void random_init(std::mt19937 &gen){
+    if(!emb) throw std::runtime_error("Language::random_init ");
+
+    emb.value().random_init(gen);
   }
 
   nlohmann::ordered_json to_json() const{
