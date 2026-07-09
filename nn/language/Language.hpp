@@ -79,6 +79,42 @@ struct Language{
     return output;
   }
 
+  //仮　まじで
+  tensor::Tensor make_grad(tensor::Tensor output,const std::vector<std::string> &texts,float &loss,float &conf,const int64_t s,const int64_t e){
+    std::vector<std::vector<int64_t>> id;
+    loss = 0.0f;
+    conf = 0.0f;
+
+    for(const std::string &s:texts){
+      id.push_back(stoi(make_target(format(s,output.dim(1)))));
+    }
+
+    for(int64_t batch = 0;batch < output.dim(0);batch++){
+      float los = 0.0f;
+      float con = 0.0f;
+
+      int64_t count = 0;
+
+      for(int64_t row = 0;row < output.dim(1);row++){
+        if(s <= row && row < e){
+          los -= std::log(output.at({batch,row,id.at(batch).at(row)}));
+          con += output.at({batch,row,id.at(batch).at(row)});
+          count++;
+        }
+
+        output.at({batch,row,id.at(batch).at(row)}) -= 1.0f;
+      }
+
+      loss += los / count;
+      conf += con / count;
+    }
+
+    loss /= output.dim(0) * (output.dim(1));
+    conf /= output.dim(0) * (output.dim(1));
+
+    return output;
+  }
+
   //tokenize前のものを受け取る
   const tensor::Tensor& forward(const std::vector<std::string> &texts,const int64_t max_len,bool training=true){
     std::vector<std::vector<std::string>> ts;
