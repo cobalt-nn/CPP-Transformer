@@ -11,14 +11,13 @@
 #include "nn/tensor/Tensor.hpp"
 #include "nn/tensor/MatrixView.hpp"
 #include "nn/ops/Activation.hpp"
-#include "nn/ops/Acts.hpp"
 #include "nn/io/BinaryIO.hpp"
 
 namespace cobalt_715::nn::layer{
 
 //全結合層
 struct Dense : ILayer{
-  Dense(int64_t in,int64_t out)
+  Dense(int64_t in,int64_t out,const ops::Activation &act = ops::activations::LeakyReLU)
     : W_({in,out}),
       b_({1,out}),
       z_({1,1}),
@@ -26,7 +25,8 @@ struct Dense : ILayer{
       dW_({in,out}),
       db_({1,out}),
       delta_({1,1}),
-      grad_({1,1}){}
+      grad_({1,1}),
+      act_(&act){}
 
   const tensor::Tensor *input_ptr_;//逆伝播で必要なため
   tensor::Tensor W_,b_;//重み、バイアス

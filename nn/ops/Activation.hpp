@@ -16,6 +16,16 @@ struct Activation{
 //基本的な活性化関数をまとめている
 namespace activations{
 
+inline const Activation identity{
+  "identity",
+  [](float x){
+    return x;
+  },
+  [](float z,float a){
+    return 1.0f;
+  }
+};
+
 inline const Activation Sigmoid{
   "Sigmoid",
   [](float x){
@@ -23,6 +33,87 @@ inline const Activation Sigmoid{
   },
   [](float z,float a){
     return a * (1.0f - a);
+  }
+};
+
+inline const Activation sin{
+  "sin",
+  [](float x){
+    return std::sin(x);
+  },
+  [](float z,float a){
+    return std::cos(z);
+  }
+};
+
+inline const Activation cos{
+  "cos",
+  [](float x){
+    return std::cos(x);
+  },
+  [](float z,float a){
+    return -std::sin(z);
+  }
+};
+
+inline const Activation tan{
+  "tan",
+  [](float x){
+    return std::tan(x);
+  },
+  [](float z,float a){
+    const float c = std::cos(z);
+    return 1.0f / (c * c);
+  }
+};
+
+inline const Activation asin{
+  "asin",
+  [](float x){
+    return std::asin(x);
+  },
+  [](float z,float a){
+    return 1.0f / std::sqrt(1.0f - z * z);
+  }
+};
+
+inline const Activation acos{
+  "acos",
+  [](float x){
+    return std::acos(x);
+  },
+  [](float z,float a){
+    return -1.0f / std::sqrt(1.0f - z * z);
+  }
+};
+
+inline const Activation atan{
+  "atan",
+  [](float x){
+    return std::atan(x);
+  },
+  [](float z,float a){
+    return 1.0f / (1.0f + z * z);
+  }
+};
+
+inline const Activation sinh{
+  "sinh",
+  [](float x){
+    return std::sinh(x);
+  },
+  [](float z,float a){
+    return std::cosh(z);
+  }
+};
+
+inline const Activation cosh{
+  "cosh",
+  [](float x){
+    return std::cosh(x);
+  },
+  [](float z,float a){
+    return std::sinh(z);
   }
 };
 
@@ -98,6 +189,26 @@ inline const Activation Straight_Through_Estimator{
   }
 };
 
+inline const Activation exp{
+  "exp",
+  [](float x){
+    return std::exp(x);
+  },
+  [](float z,float a){
+    return a;
+  }
+};
+
+inline const Activation abs{
+  "abs",
+  [](float x){
+    return std::abs(x);
+  },
+  [](float z,float a){
+    return (z > 0.0f) ? 1.0f:-1.0f;
+  }
+};
+
 inline const Activation square{
   "square",
   [](float x){
@@ -114,7 +225,18 @@ inline const Activation cube{
     return x * x * x;
   },
   [](float z,float a){
-    return 2.0f * z * z;
+    return 3.0f * z * z;
+  }
+};
+
+//開発者用
+inline const Activation test{
+  "test",
+  [](float x){
+    return x;
+  },
+  [](float z,float a){
+    return 1.0f;
   }
 };
 

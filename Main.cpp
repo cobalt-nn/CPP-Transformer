@@ -52,25 +52,145 @@ int main(){
 
   lang.add("1234567890 I'll be back Attention Is All You Need I have a pen.I have an apple. NN");
 
-  lang.build(lang.size(),32);
+  const int64_t dim = 32;
+  const int64_t head_num = 4;
+  const int64_t cache_len = 16;
 
-  const int64_t cache_len = 32;
+  const ops::Activation &act = ops::activations::square;
+
+  lang.build(lang.size(),dim);
 
   Model m;
 
-  m.add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,cache_len,true))
-   .add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(std::make_unique<layer::FFN>(32))
-   .add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,cache_len,true))
-   .add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(std::make_unique<layer::FFN>(32))
-   .add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(32,128,std::make_unique<layer::Attention>(32,4,32,32,cache_len,true))
-   .add<layer::RMSNorm>(32)
-   .add<layer::ReZero>(std::make_unique<layer::FFN>(32))
-   .add<layer::Linear>(32,lang.size())
+  m.add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+   .add<layer::RMSNorm>(dim)
+   .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act))
+   .add<layer::Linear>(dim,lang.size())
    .add<layer::Softmax>();
 
   lang.random_init(gen);
@@ -87,8 +207,27 @@ int main(){
 
   float loss499 = 0.0f;
   float loss999 = 0.0f;
+  float loss1999 = 0.0f;
+  float loss2999 = 0.0f;
+  float loss3999 = 0.0f;
+  float loss4999 = 0.0f;
+  float loss5999 = 0.0f;
+  float loss6999 = 0.0f;
+  float loss7999 = 0.0f;
+  float loss8999 = 0.0f;
+  float loss9999 = 0.0f;
+  float loss10999 = 0.0f;
+  float loss11999 = 0.0f;
+  float loss12999 = 0.0f;
+  float loss13999 = 0.0f;
+  float loss14999 = 0.0f;
+  float loss15999 = 0.0f;
+  float loss16999 = 0.0f;
+  float loss17999 = 0.0f;
+  float loss18999 = 0.0f;
+  float loss19999 = 0.0f;
 
-  for(int64_t i = 0;i < 1000;i++){
+  for(int64_t i = 0;i < 20000;i++){
     std::cout << i << "----------------------------------------" << std::endl;
 
     const tensor::Tensor &out = m.forward(lang.forward(input,cache_len));
@@ -104,6 +243,25 @@ int main(){
 
     if(i == 499) loss499 = loss;
     if(i == 999) loss999 = loss;
+    if(i == 1999) loss1999 = loss;
+    if(i == 2999) loss2999 = loss;
+    if(i == 3999) loss3999 = loss;
+    if(i == 4999) loss4999 = loss;
+    if(i == 5999) loss5999 = loss;
+    if(i == 6999) loss6999 = loss;
+    if(i == 7999) loss7999 = loss;
+    if(i == 8999) loss8999 = loss;
+    if(i == 9999) loss9999 = loss;
+    if(i == 10999) loss10999 = loss;
+    if(i == 11999) loss11999 = loss;
+    if(i == 12999) loss12999 = loss;
+    if(i == 13999) loss13999 = loss;
+    if(i == 14999) loss14999 = loss;
+    if(i == 15999) loss15999 = loss;
+    if(i == 16999) loss16999 = loss;
+    if(i == 17999) loss17999 = loss;
+    if(i == 18999) loss18999 = loss;
+    if(i == 19999) loss19999 = loss;
 
     std::cout << "loss:" << loss << std::endl;
     std::cout << "confidence:" << conf << std::endl;
@@ -117,6 +275,25 @@ int main(){
 
   std::cout << "499:" << loss499 << std::endl;
   std::cout << "999:" << loss999 << std::endl;
+  std::cout << "1999:" << loss1999 << std::endl;
+  std::cout << "2999:" << loss2999 << std::endl;
+  std::cout << "3999:" << loss3999 << std::endl;
+  std::cout << "4999:" << loss4999 << std::endl;
+  std::cout << "5999:" << loss5999 << std::endl;
+  std::cout << "6999:" << loss6999 << std::endl;
+  std::cout << "7999:" << loss7999 << std::endl;
+  std::cout << "8999:" << loss8999 << std::endl;
+  std::cout << "9999:" << loss9999 << std::endl;
+  std::cout << "10999:" << loss10999 << std::endl;
+  std::cout << "11999:" << loss11999 << std::endl;
+  std::cout << "12999:" << loss12999 << std::endl;
+  std::cout << "13999:" << loss13999 << std::endl;
+  std::cout << "14999:" << loss14999 << std::endl;
+  std::cout << "15999:" << loss15999 << std::endl;
+  std::cout << "16999:" << loss16999 << std::endl;
+  std::cout << "17999:" << loss17999 << std::endl;
+  std::cout << "18999:" << loss18999 << std::endl;
+  std::cout << "19999:" << loss19999 << std::endl;
 
   return 0;
 }

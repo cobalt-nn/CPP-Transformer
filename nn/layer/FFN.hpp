@@ -7,6 +7,7 @@
 #include "ILayer.hpp"
 #include "Dense.hpp"
 #include "Linear.hpp"
+#include "nn/ops/Activation.hpp"
 #include "nlohmann/json.hpp"
 #include "nn/tensor/Tensor.hpp"
 #include "nn/io/BinaryIO.hpp"
@@ -14,18 +15,18 @@
 namespace cobalt_715::nn::layer{
 
 struct FFN : ILayer{
-  FFN(int64_t in)
+  FFN(int64_t in,const ops::Activation &act = ops::activations::LeakyReLU)
     : in_size_(in),
       out1_size_(in * 4),
       out2_size_(in),
-      dense_(in,in * 4),
+      dense_(in,in * 4,act),
       linear_(in * 4,in,true){}
 
-  FFN(int64_t in,int64_t out1,int64_t out2)
+  FFN(int64_t in,int64_t out1,int64_t out2,const ops::Activation &act = ops::activations::LeakyReLU)
     : in_size_(in),
       out1_size_(out1),
       out2_size_(out2),
-      dense_(in,out1),
+      dense_(in,out1,act),
       linear_(out1,out2,true){}
 
   const int64_t in_size_;

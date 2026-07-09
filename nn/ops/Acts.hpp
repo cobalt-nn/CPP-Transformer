@@ -16,13 +16,24 @@ private:
   //デフォルトでの関数を登録する
   static void init(){
     static bool initialized = [](){
+      addAct(activations::identity);
       addAct(activations::Sigmoid);
+      addAct(activations::sin);
+      addAct(activations::cos);
+      addAct(activations::tan);
+      addAct(activations::asin);
+      addAct(activations::acos);
+      addAct(activations::atan);
+      addAct(activations::sinh);
+      addAct(activations::cosh);
       addAct(activations::tanh);
       addAct(activations::ReLU);
       addAct(activations::LeakyReLU);
       addAct(activations::SiLU);
       addAct(activations::GELU);
       addAct(activations::Straight_Through_Estimator);
+      addAct(activations::exp);
+      addAct(activations::abs);
       addAct(activations::square);
       addAct(activations::cube);
       return true;
