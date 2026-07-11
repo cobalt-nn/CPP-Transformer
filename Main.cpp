@@ -43,6 +43,8 @@
 
 #include "nlohmann/json.hpp"
 
+#include "DataMaker.hpp"
+
 using namespace cobalt_715::nn;
 
 int main(){
@@ -55,11 +57,11 @@ int main(){
   const int64_t dim = 128;
   const int64_t head_num = 4;
   const int64_t cache_len = 256;
-  const ops::Activation &act = ops::activations::square;
+  const ops::Activation &act = ops::activations::LeakyReLU;
 
   Model m;
 
-  for(size_t i = 0;i < 16;i++) {
+  for(size_t i = 0;i < 16;i++){
     m.add<layer::RMSNorm>(dim)
      .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
      .add<layer::RMSNorm>(dim)
@@ -71,25 +73,40 @@ int main(){
 
   m.load_all("nn/models/model.json","nn/models/model.bin");
 
-  std::vector<std::string> input = {
-    "1234567890",
-    "a12345678901234567890",
-    "b123456789012345678901234567890",
-    "c1234567890123456789012345678901234567890",
-    "d12345678901234567890123456789012345678901234567890",
-    "e123456789012345678901234567890123456789012345678901234567890",
-    "f1234567890123456789012345678901234567890123456789012345678901234567890",
-    "g12345678901234567890123456789012345678901234567890123456789012345678901234567890",
-  };
+  //lang.random_init(gen);
+  //m.random_init(gen);
 
-  lang.random_init(gen);
-  m.random_init(gen);
+  DataMaker dm(cache_len,lang);
 
-  const float lr = 0.0001f;
+  const float lr = 0.00005f;
 
-  for(int64_t i = 0;i < 500;i++){
-    std::cout << i << "----------------------------------------" << std::endl;
+  std::vector<float> loss_arr;
+  std::vector<float> conf_arr;
 
+  for(int64_t i = 0;i < 2500;i++){
+    std::vector<language::Tokens> input = {
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.wikitext()
+    };
+  }
+
+  for(int64_t i = 2500;i < 6000;i++){
+    std::vector<language::Tokens> input = {
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.wikitext(),
+      dm.dolly(),
+      dm.dolly()
+    };
     const tensor::Tensor &out = m.forward(lang.forward(input,cache_len));
 
     float loss = 0.0f;
@@ -97,22 +114,50 @@ int main(){
 
     lang.backward(m.backward(lang.make_grad(out,input,loss,conf)));
 
-    for(const std::string_view s:lang.argmax(out)){
-      std::cout << s << std::endl;
+    if(i % 10 == 0){
+
+      std::cout << i << "****************************************" << std::endl;
+
+      std::cout << "input:" << lang.detokenize(input.at(0)).substr(0,64) << std::endl;
+      std::cout << "----------------------------------------" << std::endl;
+      std::cout << "output:" << lang.argmax(out).at(0).substr(0,64) << std::endl;
+
+      std::cout << "++++++++++++++++++++++++++++++++++++++++" << std::endl;
+
+      std::cout << "input:" << lang.detokenize(input.at(7)).substr(0,64) << std::endl;
+      std::cout << "----------------------------------------" << std::endl;
+      std::cout << "output:" << lang.argmax(out).at(7).substr(0,64) << std::endl;
+
+      std::cout << "loss:" << loss << std::endl;
+      std::cout << "confidence:" << conf << std::endl;
     }
 
-    std::cout << "loss:" << loss << std::endl;
-    std::cout << "confidence:" << conf << std::endl;
+    loss_arr.push_back(loss);
+    conf_arr.push_back(conf);
 
     lang.step(lr);
     m.step(lr);
 
     lang.zero_grad();
     m.zero_grad();
+
+    if(i % 500 == 0){
+      m.save_all("nn/models/model.json","nn/models/model.bin");
+      lang.save_all("nn/models/language.json","nn/models/language.bin");
+    }
   }
 
   m.save_all("nn/models/model.json","nn/models/model.bin");
   lang.save_all("nn/models/language.json","nn/models/language.bin");
+
+  nlohmann::ordered_json json;
+
+  json["loss"] = loss_arr;
+  json["confidence"] = conf_arr;
+
+  std::ofstream loss_conf("nn/models/loss.json");
+
+  loss_conf << json.dump(2);
 
   return 0;
 }

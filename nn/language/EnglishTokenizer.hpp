@@ -14,8 +14,8 @@
 namespace cobalt_715::nn::language{
 
 struct EnglishTokenizer{
-  Tokens format(const std::string_view text,const int64_t max_len) const{
-    Tokens tokens = tokenize(text);
+  Tokens format(const std::string_view text,const int64_t max_len,const std::unordered_map<std::string,int64_t> *stoi = nullptr) const{
+    Tokens tokens = tokenize(text,stoi);
 
     while(tokens.v_.size() < max_len){
       tokens.v_.push_back(token::PAD);
@@ -27,7 +27,7 @@ struct EnglishTokenizer{
   }
 
   //stringをtokenに分解
-  Tokens tokenize(const std::string_view text) const{
+  Tokens tokenize(const std::string_view text,const std::unordered_map<std::string,int64_t> *stoi = nullptr) const{
     std::vector<std::string> tokens;
 
     size_t be = 0;
@@ -109,7 +109,19 @@ struct EnglishTokenizer{
       hell2:
 
       if(!sv.empty()){
-        tokens.push_back(std::string(sv));
+        if(stoi == nullptr){
+          tokens.push_back(std::string(sv));
+        }else{
+          if(stoi->contains(std::string(sv))){
+            tokens.push_back(std::string(sv));
+          }else{
+            size_t size = 2;
+
+            for(size_t i = 0;i < sv.size();i += size){
+              tokens.push_back(std::string(sv.substr(i,std::min(size,sv.size() - i))));
+            }
+          }
+        }
       }
 
       if(!suffix.empty()){
@@ -194,7 +206,6 @@ struct EnglishTokenizer{
     return text;
   }
 
-private:
   inline static const std::vector<std::string> symbol_ = {
     token::PAD,
     token::UNK,
@@ -205,6 +216,7 @@ private:
     token::USER,
     token::ASSISTANT,
     token::SYSTEM,
+    "\r\n",
     "'ll",
     "'LL",
     "'re",
@@ -239,6 +251,7 @@ private:
     " ",
     "!",
     "\"",
+    "\n",
     "#",
     "$",
     "%",

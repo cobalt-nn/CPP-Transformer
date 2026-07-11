@@ -917,7 +917,7 @@
     {
       "layer_type": "Linear",
       "in": 128,
-      "out": 4096,
+      "out": 6144,
       "has_bias": "false"
     },
     {

@@ -10,9 +10,9 @@ Please download them from their original sources.<br>
 
 ## コンパイル方法
 
-g++ -std=c++20 -I. -Iexternal *.cpp nn/ops/*.cpp data/*.cpp -o main<br>
-g++ -std=c++20 -march=native -I. -Iexternal *.cpp nn/ops/*.cpp data/*.cpp -o main<br>
-g++ -std=c++20 -Ofast -DNDEBUG -march=native -I. -Iexternal *.cpp nn/ops/*.cpp data/*.cpp -o main<br>
+g++ -std=c++20 -I. -Iexternal *.cpp nn/ops/*.cpp -o main<br>
+g++ -std=c++20 -march=native -I. -Iexternal *.cpp nn/ops/*.cpp -o main<br>
+g++ -std=c++20 -Ofast -DNDEBUG -march=native -I. -Iexternal *.cpp nn/ops/*.cpp -o main<br>
 
 ## 実行方法
 

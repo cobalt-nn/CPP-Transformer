@@ -140,7 +140,7 @@ inline const Activation ReLU{
 inline const Activation LeakyReLU{
   "LeakyReLU",
   [](float x){
-    return (0.0f < x) ? x:0.01f * x;;
+    return (0.0f < x) ? x:0.01f * x;
   },
   [](float z,float a){
     return (0.0f < z) ? 1.0f:0.01f;

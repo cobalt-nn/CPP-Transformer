@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -23,12 +25,12 @@ struct Language{
   //formatされたtokenize
   //トークン数を指定できる
   Tokens format(const std::string_view text,const int64_t max_len) const{
-    return et.format(text,max_len);
+    return et.format(text,max_len,&voc.stoi_);
   }
 
   //stringをtokenに分解
   Tokens tokenize(const std::string_view text) const{
-    return et.tokenize(text);
+    return et.tokenize(text,&voc.stoi_);
   }
 
   //tokenizeした結果をstringに戻す
@@ -55,32 +57,7 @@ struct Language{
   }
 
   //仮　まじで
-  tensor::Tensor make_grad(tensor::Tensor output,const std::vector<std::string> &texts,float &loss,float &conf){
-    std::vector<std::vector<int64_t>> id;
-    loss = 0.0f;
-    conf = 0.0f;
-
-    for(const std::string &s:texts){
-      id.push_back(stoi(make_target(format(s,output.dim(1)))));
-    }
-
-    for(int64_t batch = 0;batch < output.dim(0);batch++){
-      for(int64_t row = 0;row < output.dim(1);row++){
-        loss -= std::log(output.at({batch,row,id.at(batch).at(row)}));
-        conf += output.at({batch,row,id.at(batch).at(row)});
-
-        output.at({batch,row,id.at(batch).at(row)}) -= 1.0f;
-      }
-    }
-
-    loss /= output.dim(0) * (output.dim(1));
-    conf /= output.dim(0) * (output.dim(1));
-
-    return output;
-  }
-
-  //仮　まじで
-  tensor::Tensor make_grad(tensor::Tensor output,const std::vector<std::string> &texts,float &loss,float &conf,const int64_t s,const int64_t e){
+  tensor::Tensor make_grad(tensor::Tensor output,const std::vector<std::string> &texts,float &loss,float &conf,const int64_t s = 0,const int64_t e = INT64_MAX){
     std::vector<std::vector<int64_t>> id;
     loss = 0.0f;
     conf = 0.0f;
@@ -109,8 +86,44 @@ struct Language{
       conf += con / count;
     }
 
-    loss /= output.dim(0) * (output.dim(1));
-    conf /= output.dim(0) * (output.dim(1));
+    loss /= output.dim(0);
+    conf /= output.dim(0);
+
+    return output;
+  }
+
+  //仮　まじで
+  tensor::Tensor make_grad(tensor::Tensor output,const std::vector<Tokens> &texts,float &loss,float &conf,const int64_t s = 0,const int64_t e = INT64_MAX){
+    std::vector<std::vector<int64_t>> id;
+    loss = 0.0f;
+    conf = 0.0f;
+
+    for(const Tokens &s:texts){
+      id.push_back(stoi(make_target(s)));
+    }
+
+    for(int64_t batch = 0;batch < output.dim(0);batch++){
+      float los = 0.0f;
+      float con = 0.0f;
+
+      int64_t count = 0;
+
+      for(int64_t row = 0;row < output.dim(1);row++){
+        if(s <= row && row < e){
+          los -= std::log(output.at({batch,row,id.at(batch).at(row)}));
+          con += output.at({batch,row,id.at(batch).at(row)});
+          count++;
+        }
+
+        output.at({batch,row,id.at(batch).at(row)}) -= 1.0f;
+      }
+
+      loss += los / count;
+      conf += con / count;
+    }
+
+    loss /= output.dim(0);
+    conf /= output.dim(0);
 
     return output;
   }
@@ -130,6 +143,23 @@ struct Language{
     }
 
     if(!emb) throw std::runtime_error("Language::forward emb is nullopt");
+
+    return emb.value().forward(ids,training);
+  }
+
+  //tokenize後のものを受け取る
+  const tensor::Tensor& forward(const std::vector<Tokens> &texts,const int64_t max_len,bool training=true){
+    if(!emb) throw std::runtime_error("Language::forward emb is nullopt");
+
+    std::vector<std::vector<int64_t>> ids;
+
+    const size_t size = texts.at(0).v_.size();
+
+    for(const Tokens &tokens:texts){
+      if(tokens.v_.size() != size) throw std::runtime_error("Language::backward");
+
+      ids.push_back(voc.stoi(tokens.v_));
+    }
 
     return emb.value().forward(ids,training);
   }
@@ -210,7 +240,7 @@ struct Language{
     voc.load_json(j["Vocabulary"]);
   }
 
-  void save_all(const std::string &path_json,const std::string &path_bin){
+  void save_all(const std::string &path_json,const std::string &path_bin) const{
     {
       std::ofstream ofs_json(path_json);
 

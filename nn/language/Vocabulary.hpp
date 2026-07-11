@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include "SpecialToken.hpp"
 #include "Tokens.hpp"
+#include "EnglishTokenizer.hpp"
 #include "nn/tensor/Tensor.hpp"
 #include "nlohmann/json.hpp"
 
@@ -14,7 +15,20 @@ namespace cobalt_715::nn::language{
 
 struct Vocabulary{
   Vocabulary(){
-    add(token::stokens);
+    add(EnglishTokenizer::symbol_);
+    add(EnglishTokenizer::prefix_);
+    add(EnglishTokenizer::suffix_);
+
+    std::string ch = "aa";
+
+    for(char &i = ch[0];i <= 'z';i++){
+      ch[1] = 'a';
+      for(char &j = ch[1];j <= 'z';j++){
+        if(!stoi_.contains(ch)){
+          add(std::vector<std::string>{ch});
+        }
+      }
+    }
   }
 
   //語彙数
@@ -122,6 +136,22 @@ struct Vocabulary{
   nlohmann::ordered_json to_json() const{
     nlohmann::ordered_json j;
 
+    /*for(int32_t k = 0;k < 200000;k++){
+      size_t en = itos_.size() - 1;
+
+      std::string ch = "aa";
+
+      for(char &i = ch[0];i <= 'z';i++){
+        ch[1] = 'a';
+        for(char &j = ch[1];j <= 'z';j++){
+          if(!stoi_.contains(ch)){
+            itos_[en] = ch;
+            en--;
+          }
+        }
+      }
+    }*/
+
     j["itos"] = itos_;
 
     return j;
@@ -134,7 +164,6 @@ struct Vocabulary{
     add(j["itos"].get<std::vector<std::string>>());
   }
 
-private:
   std::vector<std::string> itos_;
   std::unordered_map<std::string,int64_t> stoi_;
 };
