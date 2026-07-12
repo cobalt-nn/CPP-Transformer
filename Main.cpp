@@ -78,34 +78,32 @@ int main(){
 
   DataMaker dm(cache_len,lang);
 
-  const float lr = 0.00005f;
+  const float lr = 0.0001f;
 
   std::vector<float> loss_arr;
   std::vector<float> conf_arr;
 
-  for(int64_t i = 0;i < 2500;i++){
-    std::vector<language::Tokens> input = {
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.wikitext()
-    };
+  for(int64_t i = 3500;i < 5000;i++){
+    gen();
+    gen();
+    gen();
+    gen();
+    gen();
+    gen();
+    gen();
+    gen();
   }
 
-  for(int64_t i = 2500;i < 6000;i++){
+  for(int64_t i = 5000;i < 5500;i++){
     std::vector<language::Tokens> input = {
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.wikitext(),
-      dm.dolly(),
-      dm.dolly()
+      dm.wikitext(gen),
+      dm.wikitext(gen),
+      dm.wikitext(gen),
+      dm.wikitext(gen),
+      dm.wikitext(gen),
+      dm.wikitext(gen),
+      dm.dolly(gen),
+      dm.dolly(gen)
     };
     const tensor::Tensor &out = m.forward(lang.forward(input,cache_len));
 
@@ -114,19 +112,28 @@ int main(){
 
     lang.backward(m.backward(lang.make_grad(out,input,loss,conf)));
 
-    if(i % 10 == 0){
-
+    if(i % 4 == 0){
       std::cout << i << "****************************************" << std::endl;
 
-      std::cout << "input:" << lang.detokenize(input.at(0)).substr(0,64) << std::endl;
-      std::cout << "----------------------------------------" << std::endl;
-      std::cout << "output:" << lang.argmax(out).at(0).substr(0,64) << std::endl;
+      const std::vector<language::Tokens> argmax = lang.argmax(out);
 
-      std::cout << "++++++++++++++++++++++++++++++++++++++++" << std::endl;
+      std::cout << "<target>       <prediction>" << std::endl;
 
-      std::cout << "input:" << lang.detokenize(input.at(7)).substr(0,64) << std::endl;
-      std::cout << "----------------------------------------" << std::endl;
-      std::cout << "output:" << lang.argmax(out).at(7).substr(0,64) << std::endl;
+      std::cout << "wikitext----------------------------------------" << std::endl;
+
+      for(int32_t j = 0;j < 16;j++){
+        std::string s = input.at(0).v_.at(j + 1);
+
+        std::cout << "[" << s << "]" << std::string(std::max(12 - static_cast<int32_t>(s.size()),0),' ') << "[" << argmax.at(0).v_.at(j) << "]" << std::endl;
+      }
+
+      std::cout << "dolly----------------------------------------" << std::endl;
+
+      for(int32_t j = 0;j < 16;j++){
+        std::string s = input.at(7).v_.at(j + 1);
+
+        std::cout << "[" << s << "]" << std::string(std::max(12 - static_cast<int32_t>(s.size()),0),' ') << "[" << argmax.at(7).v_.at(j) << "]" << std::endl;
+      }
 
       std::cout << "loss:" << loss << std::endl;
       std::cout << "confidence:" << conf << std::endl;

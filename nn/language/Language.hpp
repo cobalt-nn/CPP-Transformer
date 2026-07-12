@@ -197,21 +197,21 @@ struct Language{
     return voc.size();
   }
 
-  std::vector<std::string> argmax(const tensor::Tensor &t){
-    std::vector<std::string> ts;
+  std::vector<Tokens> argmax(const tensor::Tensor &t){
+    std::vector<Tokens> ts;
 
     for(const std::vector<int64_t> v:voc.argmax(t)){
-      ts.push_back(detokenize(itos(v)));
+      ts.push_back(Tokens(itos(v)));
     }
 
     return ts;
   }
 
-  std::vector<std::string> sample(const tensor::Tensor &t,std::mt19937 &gen){
-    std::vector<std::string> ts;
+  std::vector<Tokens> sample(const tensor::Tensor &t,std::mt19937 &gen){
+    std::vector<Tokens> ts;
 
     for(const std::vector<int64_t> v:voc.sample(t,gen)){
-      ts.push_back(detokenize(itos(v)));
+      ts.push_back(Tokens(itos(v)));
     }
 
     return ts;
