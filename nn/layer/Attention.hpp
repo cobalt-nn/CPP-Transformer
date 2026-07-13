@@ -3,6 +3,7 @@
 #include <iostream>
 #include <optional>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <random>
 #include <cstdint>
@@ -18,7 +19,12 @@ namespace cobalt_715::nn::layer{
 
 //self attention
 struct Attention : ILayer{
-  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v,bool causal_mask_bool = false)
+  Attention(int64_t in,
+            int64_t num_heads,
+            int64_t d_qk,
+            int64_t d_v,
+            bool causal_mask_bool = false)
+
     : in_size_(in),
       qkv_linear_(in,num_heads * (d_qk * 2 + d_v),true),
       num_heads_(num_heads),
@@ -34,15 +40,27 @@ struct Attention : ILayer{
       d_scores_({1,1,1,1}),
       causal_mask_bool_(causal_mask_bool){}
 
-  Attention(int64_t in,int64_t num_heads,int64_t d_qk,int64_t d_v,int64_t kv_cache_max_length,bool causal_mask_bool) : Attention(in,num_heads,d_qk,d_v,causal_mask_bool){
-    cache_.emplace(d_qk * num_heads,d_v * num_heads,kv_cache_max_length);
+  Attention(int64_t in,
+            int64_t num_heads,
+            int64_t d_qk,
+            int64_t d_v,bool causal_mask_bool,
+            int64_t kv_cache_max_len,
+            int64_t kv_cache_stride_len = -1)
+
+    : Attention(in,num_heads,d_qk,d_v,causal_mask_bool){
+
+    cache_.emplace(d_qk * num_heads,d_v * num_heads,kv_cache_max_len,kv_cache_stride_len);
   }
 
   struct KVCache{
-    KVCache(int64_t d_k,int64_t d_v,int64_t max_length)
-      : K_({max_length,d_k}),
-        V_({max_length,d_v}),
-        max_length_(max_length){}
+    KVCache(int64_t d_k,int64_t d_v,int64_t max_len,int64_t stride_len)//stride_len_の分だけまとめて余裕を開ける
+      : K_({max_len,d_k}),
+        V_({max_len,d_v}),
+        max_len_(max_len),
+        stride_len_((stride_len < 0) ? max_len / 4:stride_len){
+
+          if(stride_len > max_len) throw std::runtime_error("KVCache");
+        }
 
     void add(const tensor::ConstMatrixView k_view,const tensor::ConstMatrixView v_view){
       if(k_view.rows() != v_view.rows()) throw std::runtime_error("Attention::KVCache k_view.rows() != v_view.rows()");
@@ -50,9 +68,18 @@ struct Attention : ILayer{
       if(k_view.cols() != K_.dim(1)) throw std::runtime_error("Attention::KVCache k_view.cols() mismatch");
       if(v_view.cols() != V_.dim(1)) throw std::runtime_error("Attention::KVCache v_view.cols() mismatch");
 
-      if(current_length_ + k_view.rows() > max_length_) throw std::runtime_error("Attention::KVCache KV cache overflow");
+      if(current_len_ + k_view.rows() > max_len_){
+        if(stride_len_ == 0) throw std::runtime_error("Attention::KVCache KV cache overflow");
 
-      tensor::MatrixView this_k_view = K_.unsafe_matrix_view(k_view.rows(),k_view.cols(),k_view.cols(),1,current_length_ * k_view.cols());
+        int64_t overflow = current_len_ + k_view.rows() - max_len_;
+
+        current_len_ -= stride_len_ + overflow;
+
+        std::memmove(K_.data(),K_.data() + (stride_len_ + overflow) * K_.dim(1),sizeof(float) * current_len_ * K_.dim(1));
+        std::memmove(V_.data(),V_.data() + (stride_len_ + overflow) * V_.dim(1),sizeof(float) * current_len_ * V_.dim(1));
+      }
+
+      tensor::MatrixView this_k_view = K_.unsafe_matrix_view(k_view.rows(),k_view.cols(),k_view.cols(),1,current_len_ * k_view.cols());
 
       //this_k_view += k_view;
 
@@ -62,7 +89,7 @@ struct Attention : ILayer{
         }
       }
 
-      tensor::MatrixView this_v_view = V_.unsafe_matrix_view(v_view.rows(),v_view.cols(),v_view.cols(),1,current_length_ * v_view.cols());
+      tensor::MatrixView this_v_view = V_.unsafe_matrix_view(v_view.rows(),v_view.cols(),v_view.cols(),1,current_len_ * v_view.cols());
 
       //this_v_view += v_view;
 
@@ -72,38 +99,43 @@ struct Attention : ILayer{
         }
       }
 
-      //std::cout << "current_length_" << current_length_ << std::endl;
+      //std::cout << "current_len_" << current_len_ << std::endl;
       //std::cout << "cache k" << this_k_view.to_string() << std::endl;
       //std::cout << "cache v" << this_v_view.to_string() << std::endl;
 
-      current_length_ += k_view.rows();
+      current_len_ += k_view.rows();
     }
 
     const tensor::ConstMatrixView get_k_view() const{
-      return K_.unsafe_matrix_view(current_length_,K_.dim(1),K_.dim(1),1,0);
+      return K_.unsafe_matrix_view(current_len_,K_.dim(1),K_.dim(1),1,0);
     }
 
     const tensor::ConstMatrixView get_v_view() const{
-      return V_.unsafe_matrix_view(current_length_,V_.dim(1),V_.dim(1),1,0);
+      return V_.unsafe_matrix_view(current_len_,V_.dim(1),V_.dim(1),1,0);
     }
 
     int64_t get_current_len() const{
-      return current_length_;
+      return current_len_;
     }
 
     int64_t get_max_len() const{
-      return max_length_;
+      return max_len_;
+    }
+
+    int64_t get_stride_len() const{
+      return stride_len_;
     }
 
     void reset(){
-      current_length_ = 0;
+      current_len_ = 0;
     }
 
   private:
     tensor::Tensor K_;
     tensor::Tensor V_;
-    int64_t current_length_ = 0;
-    int64_t max_length_ = 0;
+    int64_t current_len_ = 0;
+    int64_t max_len_ = 0;
+    int64_t stride_len_ = 0;
   };
 
   const int64_t in_size_;
@@ -595,6 +627,7 @@ for(int i = 0;i < dw_view.rows();i++){
 
     if(cache_){
       j["kv_cache_max_length"] = cache_.value().get_max_len();
+      j["kv_cache_stride_length"] = cache_.value().get_stride_len();
     }
 
     j["causal_mask"] = (causal_mask_bool_) ? "true":"false";

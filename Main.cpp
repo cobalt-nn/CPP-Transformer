@@ -35,6 +35,7 @@
 
 #include "nn/Model.hpp"
 #include "nn/language/EnglishTokenizer.hpp"
+#include "nn/language/TextGenerator.hpp"
 #include "nn/language/Vocabulary.hpp"
 #include "nn/language/Embedding.hpp"
 #include "nn/language/SpecialToken.hpp"
@@ -56,14 +57,15 @@ int main(){
 
   const int64_t dim = 128;
   const int64_t head_num = 4;
-  const int64_t cache_len = 256;
+  const int64_t cache_len = 512;
+  const int64_t learn_len = 256;
   const ops::Activation &act = ops::activations::LeakyReLU;
 
   Model m;
 
   for(size_t i = 0;i < 16;i++){
     m.add<layer::RMSNorm>(dim)
-     .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,cache_len,true))
+     .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,true,cache_len))
      .add<layer::RMSNorm>(dim)
      .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act));
   }
@@ -72,6 +74,24 @@ int main(){
    .add<layer::Softmax>();
 
   m.load_all("nn/models/model.json","nn/models/model.bin");
+
+  language::TextGenerator tg(lang,m);
+
+  while(true){
+    std::cout << "++++++++++++++++++++++++++++++++++++++++" << std::endl;
+
+    std::string text;
+
+    std::getline(std::cin,text);
+
+    std::cout << "----------------------------------------\n";
+
+    std::string out_str = tg.gen(text,gen);
+
+    //std::cout << out_str << std::endl;
+
+    tg.reset();
+  }
 
   //lang.random_init(gen);
   //m.random_init(gen);
@@ -105,7 +125,7 @@ int main(){
       dm.dolly(gen),
       dm.dolly(gen)
     };
-    const tensor::Tensor &out = m.forward(lang.forward(input,cache_len));
+    const tensor::Tensor &out = m.forward(lang.forward(input,learn_len));
 
     float loss = 0.0f;
     float conf = 0.0f;

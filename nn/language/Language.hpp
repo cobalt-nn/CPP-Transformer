@@ -57,39 +57,14 @@ struct Language{
   }
 
   //仮　まじで
-  tensor::Tensor make_grad(tensor::Tensor output,const std::vector<std::string> &texts,float &loss,float &conf,const int64_t s = 0,const int64_t e = INT64_MAX){
-    std::vector<std::vector<int64_t>> id;
-    loss = 0.0f;
-    conf = 0.0f;
+  tensor::Tensor make_grad(int i,tensor::Tensor output,const std::vector<std::string> &texts,float &loss,float &conf,const int64_t s = 0,const int64_t e = INT64_MAX){
+    std::vector<Tokens> tokens;
 
     for(const std::string &s:texts){
-      id.push_back(stoi(make_target(format(s,output.dim(1)))));
+      tokens.push_back(format(s,output.dim(1)));
     }
 
-    for(int64_t batch = 0;batch < output.dim(0);batch++){
-      float los = 0.0f;
-      float con = 0.0f;
-
-      int64_t count = 0;
-
-      for(int64_t row = 0;row < output.dim(1);row++){
-        if(s <= row && row < e){
-          los -= std::log(output.at({batch,row,id.at(batch).at(row)}));
-          con += output.at({batch,row,id.at(batch).at(row)});
-          count++;
-        }
-
-        output.at({batch,row,id.at(batch).at(row)}) -= 1.0f;
-      }
-
-      loss += los / count;
-      conf += con / count;
-    }
-
-    loss /= output.dim(0);
-    conf /= output.dim(0);
-
-    return output;
+    return make_grad(output,tokens,loss,conf,s,e);
   }
 
   //仮　まじで
@@ -102,6 +77,8 @@ struct Language{
       id.push_back(stoi(make_target(s)));
     }
 
+    const int64_t pad_id = stoi(std::vector<std::string>{token::PAD}).at(0);
+
     for(int64_t batch = 0;batch < output.dim(0);batch++){
       float los = 0.0f;
       float con = 0.0f;
@@ -115,7 +92,13 @@ struct Language{
           count++;
         }
 
-        output.at({batch,row,id.at(batch).at(row)}) -= 1.0f;
+        if(pad_id == id.at(batch).at(row)){
+          float *ptr = &output.at({batch,row,0});
+
+          std::fill(ptr,ptr + output.dim(2),0.0f);
+        }else{
+          output.at({batch,row,id.at(batch).at(row)}) -= 1.0f;
+        }
       }
 
       loss += los / count;
