@@ -86,23 +86,25 @@ struct Language{
       int64_t count = 0;
 
       for(int64_t row = 0;row < output.dim(1);row++){
-        if(s <= row && row < e){
-          los -= std::log(output.at({batch,row,id.at(batch).at(row)}));
-          con += output.at({batch,row,id.at(batch).at(row)});
-          count++;
-        }
-
         if(pad_id == id.at(batch).at(row)){
           float *ptr = &output.at({batch,row,0});
 
           std::fill(ptr,ptr + output.dim(2),0.0f);
         }else{
+          if(s <= row && row < e){
+            los -= std::log(output.at({batch,row,id.at(batch).at(row)}));
+            con += output.at({batch,row,id.at(batch).at(row)});
+            count++;
+          }
+
           output.at({batch,row,id.at(batch).at(row)}) -= 1.0f;
         }
       }
 
-      loss += los / count;
-      conf += con / count;
+      if(count != 0){
+        loss += los / count;
+        conf += con / count;
+      }
     }
 
     loss /= output.dim(0);

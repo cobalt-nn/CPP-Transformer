@@ -15,7 +15,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -72,7 +73,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -129,7 +131,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -186,7 +189,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -243,7 +247,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -300,7 +305,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -357,7 +363,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -414,7 +421,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -471,7 +479,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -528,7 +537,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -585,7 +595,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -642,7 +653,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -699,7 +711,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -756,7 +769,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -813,7 +827,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",
@@ -870,7 +885,8 @@
         "d_qk": 128,
         "d_v": 128,
         "kv_cache": "true",
-        "kv_cache_max_length": 256,
+        "kv_cache_max_length": 512,
+        "kv_cache_stride_length": 128,
         "causal_mask": "true",
         "qkv_linear": {
           "layer_type": "Linear",

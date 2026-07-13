@@ -75,7 +75,7 @@ int main(){
 
   m.load_all("nn/models/model.json","nn/models/model.bin");
 
-  language::TextGenerator tg(lang,m);
+  /*language::TextGenerator tg(lang,m);
 
   while(true){
     std::cout << "++++++++++++++++++++++++++++++++++++++++" << std::endl;
@@ -91,19 +91,23 @@ int main(){
     //std::cout << out_str << std::endl;
 
     tg.reset();
-  }
+  }*/
 
-  //lang.random_init(gen);
-  //m.random_init(gen);
 
-  DataMaker dm(cache_len,lang);
+  std::mt19937 model_init_gen(0);
 
-  const float lr = 0.0001f;
+  lang.random_init(model_init_gen);
+  m.random_init(model_init_gen);
+
+
+  DataMaker dm(learn_len,lang);
+
+  const float lr = 0.00005f;
 
   std::vector<float> loss_arr;
   std::vector<float> conf_arr;
 
-  for(int64_t i = 3500;i < 5000;i++){
+  for(int64_t i = 0;i < 0;i++){
     gen();
     gen();
     gen();
@@ -114,7 +118,7 @@ int main(){
     gen();
   }
 
-  for(int64_t i = 5000;i < 5500;i++){
+  for(int64_t i = 0;i < 4000;i++){
     std::vector<language::Tokens> input = {
       dm.wikitext(gen),
       dm.wikitext(gen),

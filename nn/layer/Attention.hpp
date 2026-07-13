@@ -134,8 +134,8 @@ struct Attention : ILayer{
     tensor::Tensor K_;
     tensor::Tensor V_;
     int64_t current_len_ = 0;
-    int64_t max_len_ = 0;
-    int64_t stride_len_ = 0;
+    const int64_t max_len_ = 0;
+    const int64_t stride_len_ = 0;
   };
 
   const int64_t in_size_;
