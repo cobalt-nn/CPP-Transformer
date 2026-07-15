@@ -75,7 +75,7 @@ int main(){
 
   m.load_all("nn/models/model.json","nn/models/model.bin");
 
-  /*language::TextGenerator tg(lang,m);
+  language::TextGenerator tg(lang,m);
 
   while(true){
     std::cout << "++++++++++++++++++++++++++++++++++++++++" << std::endl;
@@ -91,13 +91,13 @@ int main(){
     //std::cout << out_str << std::endl;
 
     tg.reset();
-  }*/
+  }
 
 
-  std::mt19937 model_init_gen(0);
+  //std::mt19937 model_init_gen(0);
 
-  lang.random_init(model_init_gen);
-  m.random_init(model_init_gen);
+  //lang.random_init(model_init_gen);
+  //m.random_init(model_init_gen);
 
 
   DataMaker dm(learn_len,lang);

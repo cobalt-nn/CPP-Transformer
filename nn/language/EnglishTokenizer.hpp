@@ -206,6 +206,57 @@ struct EnglishTokenizer{
     return text;
   }
 
+  bool cap_ = false;
+  bool all_cap_ = false;
+  bool sym_ = false;
+  int64_t all_cap_count_ = 0;
+
+  std::string detokenize(std::string s){
+    sym_ = false;
+
+    if(s == token::CAP){
+      cap_ = true;
+      return "";
+    }else if(s == token::ALL_CAP){
+      all_cap_ = true;
+      return "";
+    }
+
+    for(const std::string &sym:symbol_){
+      if(s == sym){
+        sym_ = true;
+        if(all_cap_count_ > 0){
+          all_cap_ = false;
+        }
+        break;
+      }
+    }
+
+    for(const std::string &ss:token::stokens){
+      if(s == ss) return "";
+    }
+
+    if(cap_){
+      s[0] = std::toupper(static_cast<unsigned char>(s[0]));
+      cap_ = false;
+    }else if(all_cap_){
+      std::transform(
+        s.begin(), 
+        s.end(), 
+        s.begin(),
+        [](char c) {return std::toupper(static_cast<unsigned char>(c));}
+      );
+
+      if(sym_){
+        all_cap_ = false;
+        all_cap_count_ = 0;
+      }else{
+        all_cap_count_++;
+      }
+    }
+    return s;
+  }
+
   inline static const std::vector<std::string> symbol_ = {
     token::PAD,
     token::UNK,

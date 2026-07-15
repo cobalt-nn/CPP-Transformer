@@ -38,6 +38,10 @@ struct Language{
     return et.detokenize(tokens);
   }
 
+  std::string detokenize(const std::string &text){
+    return et.detokenize(text);
+  }
+
   //id[]をTokensに変換する
   Tokens itos(const std::vector<int64_t> &ids) const{
     return voc.itos(ids);

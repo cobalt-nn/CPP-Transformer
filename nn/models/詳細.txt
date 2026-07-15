@@ -1,0 +1,17 @@
+
+C:\Users\hiros\Desktop\C++\Transformer>g++ -std=c++20 -Ofast -DNDEBUG -march=native -I. -Iexternal *.cpp nn/ops/*.cpp -o main
+
+C:\Users\hiros\Desktop\C++\Transformer>main
+++++++++++++++++++++++++++++++++++++++++
+Who is json?
+----------------------------------------
+Wijoydion, article: the system. Short is its prophard lating language; in that is notable the, sty is opticess and macarthur. The tro is full- the filming, most surfaceing sane my line cher of a cover arose since a hacultural other methanimportant orders continued sight in Buenos as the briefly on life. Adhat he was like saying the comparmona, used countries that can paavar a publishish uerne. However was a entry increases of 's harvard spivity.
+
+
+However adaptate at a scheduled in Draft Winter Lism .'s ovis a violent of the the from Hospitally water exfining to fed the fleet ii in originin the paid that to usually reference to the howbor may official conwards, who standard policy in a bickhono commublis select groups on and Museum Mobbycle 's doctor: Japanese, which is a from the each perience as the powerful to genez of plomwardity that has been clear to various etly sam. Mobile in order to present ponson the pieces of the im10 day the parthaunsurprise vast in the concentrat summer felt for sensitive refitted by giving a in history of the first time.<count:520>
+++++++++++++++++++++++++++++++++++++++++
+
+
+lr = 0.00005f;
+
+0..4000step

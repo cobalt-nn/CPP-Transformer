@@ -35,18 +35,18 @@ struct TextGenerator{
     int64_t count = 0;
 
     while(out_str != token::EOS && out_str != token::PAD){
+      std::cout << lang_.detokenize(out_str);
+
       return_strs.push_back(out_str);
 
       out = &model_.forward(lang_.forward({lang_.tokenize(out_str)},false),false);
 
       out_str = lang_.sample(*out,r_gen).at(0).v_.at(0);
 
-      std::cout << out_str;
-
       count++;
     }
 
-    std::cout << "count" << count << std::endl;
+    std::cout << "<count:" << count << ">" << std::endl;
 
     return lang_.detokenize(return_strs);
   }
