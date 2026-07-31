@@ -1,6 +1,5 @@
 #include <iostream>
 #include <memory>
-#include <map>
 #include <filesystem>
 #include <fstream>
 #include <random>
@@ -10,7 +9,6 @@
 #include <cstdint>
 #include <cmath>
 #include <cstddef>
-#include <algorithm>
 #include "nn/ops/vec.hpp"
 #include "nn/ops/vec_cpu.hpp"
 #include "nn/tensor/Tensor.hpp"
@@ -28,167 +26,133 @@
 #include "nn/layer/FFN.hpp"
 #include "nn/ops/Activation.hpp"
 #include "nn/layer/Identity.hpp"
+#include "nn/ops/Activation.hpp"
 #include "nn/ops/Acts.hpp"
 #include "nn/ops/GEMM.hpp"
 
 #include "nn/io/BinaryIO.hpp"
 
 #include "nn/Model.hpp"
-#include "nn/language/EnglishTokenizer.hpp"
-#include "nn/language/TextGenerator.hpp"
-#include "nn/language/Vocabulary.hpp"
-#include "nn/language/Embedding.hpp"
-#include "nn/language/SpecialToken.hpp"
-#include "nn/language/Language.hpp"
-#include "nn/language/Tokens.hpp"
+
+#include "data/MNISTLoader.hpp"
 
 #include "nlohmann/json.hpp"
 
-#include "DataMaker.hpp"
-
 using namespace cobalt_715::nn;
 
+std::vector<float> makeTenVector(int i){
+  std::vector<float> v(10);
+  v.at(i) = 1;
+  return v;
+}
+
 int main(){
-  std::mt19937 gen(0);
-
-  language::Language lang;
-
-  lang.load_all("nn/models/language.json","nn/models/language.bin");
-
-  const int64_t dim = 128;
-  const int64_t head_num = 4;
-  const int64_t cache_len = 512;
-  const int64_t learn_len = 256;
-  const ops::Activation &act = ops::activations::LeakyReLU;
+  const ops::Activation act = ops::activations::LeakyReLU;
 
   Model m;
 
-  for(size_t i = 0;i < 16;i++){
-    m.add<layer::RMSNorm>(dim)
-     .add<layer::ReZero>(dim,dim * head_num,std::make_unique<layer::Attention>(dim,head_num,dim,dim,true,cache_len))
-     .add<layer::RMSNorm>(dim)
-     .add<layer::ReZero>(std::make_unique<layer::FFN>(dim,act));
-  }
-
-  m.add<layer::Linear>(dim,lang.size())
+  m.add<layer::Dense>(784,256,act)
+   .add<layer::Dense>(256,64,act)
+   .add<layer::Dense>(64,10,act)
    .add<layer::Softmax>();
 
-  m.load_all("nn/models/model.json","nn/models/model.bin");
+  const size_t MNIST_size = 60000;
 
-  language::TextGenerator tg(lang,m);
+  const size_t batch_size = 32;
 
-  while(true){
-    std::cout << "++++++++++++++++++++++++++++++++++++++++" << std::endl;
+  std::vector<float> images;
+  std::vector<float> labels;
 
-    std::string text;
+  std::vector<tensor::Tensor> input;
+  std::vector<tensor::Tensor> target;
 
-    std::getline(std::cin,text);
+  MNISTLoader mnist("data/train-images.idx3-ubyte", "data/train-labels.idx1-ubyte");
 
-    std::cout << "----------------------------------------\n";
-
-    std::string out_str = tg.gen(text,gen);
-
-    //std::cout << out_str << std::endl;
-
-    tg.reset();
-  }
-
-
-  //std::mt19937 model_init_gen(0);
-
-  //lang.random_init(model_init_gen);
-  //m.random_init(model_init_gen);
-
-
-  DataMaker dm(learn_len,lang);
-
-  const float lr = 0.00005f;
-
-  std::vector<float> loss_arr;
-  std::vector<float> conf_arr;
-
-  for(int64_t i = 0;i < 0;i++){
-    gen();
-    gen();
-    gen();
-    gen();
-    gen();
-    gen();
-    gen();
-    gen();
-  }
-
-  for(int64_t i = 0;i < 4000;i++){
-    std::vector<language::Tokens> input = {
-      dm.wikitext(gen),
-      dm.wikitext(gen),
-      dm.wikitext(gen),
-      dm.wikitext(gen),
-      dm.wikitext(gen),
-      dm.wikitext(gen),
-      dm.dolly(gen),
-      dm.dolly(gen)
-    };
-    const tensor::Tensor &out = m.forward(lang.forward(input,learn_len));
-
-    float loss = 0.0f;
-    float conf = 0.0f;
-
-    lang.backward(m.backward(lang.make_grad(out,input,loss,conf)));
-
-    if(i % 4 == 0){
-      std::cout << i << "****************************************" << std::endl;
-
-      const std::vector<language::Tokens> argmax = lang.argmax(out);
-
-      std::cout << "<target>       <prediction>" << std::endl;
-
-      std::cout << "wikitext----------------------------------------" << std::endl;
-
-      for(int32_t j = 0;j < 16;j++){
-        std::string s = input.at(0).v_.at(j + 1);
-
-        std::cout << "[" << s << "]" << std::string(std::max(12 - static_cast<int32_t>(s.size()),0),' ') << "[" << argmax.at(0).v_.at(j) << "]" << std::endl;
+  for(size_t i = 0;i < MNIST_size;i += batch_size){
+    images.clear();
+    labels.clear();
+    for(size_t j = i;j < std::min(i + batch_size,MNIST_size);j++){
+      for(float f:mnist.getImage(j)){
+        images.push_back(f);
       }
-
-      std::cout << "dolly----------------------------------------" << std::endl;
-
-      for(int32_t j = 0;j < 16;j++){
-        std::string s = input.at(7).v_.at(j + 1);
-
-        std::cout << "[" << s << "]" << std::string(std::max(12 - static_cast<int32_t>(s.size()),0),' ') << "[" << argmax.at(7).v_.at(j) << "]" << std::endl;
+      for(float f:makeTenVector(mnist.getLabel(j))){
+        labels.push_back(f);
       }
-
-      std::cout << "loss:" << loss << std::endl;
-      std::cout << "confidence:" << conf << std::endl;
     }
+    input.push_back(tensor::Tensor({static_cast<int64_t>(std::min(batch_size,MNIST_size - i)),784},images));
+    target.push_back(tensor::Tensor({static_cast<int64_t>(std::min(batch_size,MNIST_size - i)),10},labels));
+  }
 
-    loss_arr.push_back(loss);
-    conf_arr.push_back(conf);
+  std::mt19937 gen(0);
 
-    lang.step(lr);
+  m.random_init(gen);
+
+  const float lr = 0.01;
+
+  auto start = std::chrono::high_resolution_clock::now();
+
+  for(size_t i = 0;i < input.size();i++){
+    const tensor::Tensor &output = m.forward(input[i]);
+    m.backward(output - target[i]);
+
     m.step(lr);
 
-    lang.zero_grad();
     m.zero_grad();
-
-    if(i % 500 == 0){
-      m.save_all("nn/models/model.json","nn/models/model.bin");
-      lang.save_all("nn/models/language.json","nn/models/language.bin");
-    }
   }
 
-  m.save_all("nn/models/model.json","nn/models/model.bin");
-  lang.save_all("nn/models/language.json","nn/models/language.bin");
+  auto end = std::chrono::high_resolution_clock::now();
 
-  nlohmann::ordered_json json;
+  auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-  json["loss"] = loss_arr;
-  json["confidence"] = conf_arr;
+  std::cout << "time: " << time << "ms\n";
 
-  std::ofstream loss_conf("nn/models/loss.json");
+  double total_loss = 0.0;
+  int correct = 0;
+  size_t total = input.size();
 
-  loss_conf << json.dump(2);
+  size_t sample_num = 0;
+
+  for(size_t i = 0;i < total;i++){
+    const tensor::Tensor &output = m.forward(input[i]);
+
+    sample_num += input[i].dim(0);
+
+    for(int64_t row = 0;row < output.dim(0);row++){
+      int max_index = -1;
+      int target_i = -1;
+      float max_element = 0.0f;
+
+      for(int64_t col = 0;col < output.dim(1);col++){
+        float out_at = output.at({row,col});
+        float tar_at = target[i].at({row,col});
+
+        if(tar_at > 0.99f) target_i = col;
+
+        if(max_element < out_at && out_at > 0.8f){
+          max_element = out_at;
+          max_index = col;
+        }
+
+        float sub = out_at - tar_at;
+
+        //total_loss += sub * sub;//MSE
+
+        total_loss -= std::log(out_at) * tar_at;//Cross Entropy
+      }
+
+      if(target_i == max_index) correct++;
+    }
+
+    /*tensor::Tensor t = output - target[i];
+    t.hadamard_(t);
+
+    for(float f:t.span()){
+      total_loss += f;
+    }*/
+  }
+
+  std::cout << "loss:" << total_loss / sample_num << std::endl;
+  std::cout << "correct:" << correct / static_cast<float>(sample_num) << std::endl;
 
   return 0;
 }

@@ -26,7 +26,8 @@ struct TextGenerator{
 
     const tensor::Tensor *out = &model_.forward(lang_.forward({lang_.tokenize(input)},false),false);
 
-    Tokens out_tokens = lang_.sample(*out,r_gen).at(0);
+    //Tokens out_tokens = lang_.sample(*out,r_gen).at(0);
+    Tokens out_tokens = lang_.argmax(*out).at(0);
 
     std::string out_str = out_tokens.v_.at(out_tokens.v_.size() - 1);
 
@@ -41,7 +42,8 @@ struct TextGenerator{
 
       out = &model_.forward(lang_.forward({lang_.tokenize(out_str)},false),false);
 
-      out_str = lang_.sample(*out,r_gen).at(0).v_.at(0);
+      //out_str = lang_.sample(*out,r_gen).at(0).v_.at(0);
+      out_str = lang_.argmax(*out).at(0).v_.at(0);
 
       count++;
     }

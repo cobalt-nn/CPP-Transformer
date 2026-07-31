@@ -137,13 +137,19 @@ inline const Activation ReLU{
   }
 };
 
+namespace LeakyReLU_status{
+
+float alpha = 0.01;
+
+}//namespace LeakyReLU_status
+
 inline const Activation LeakyReLU{
   "LeakyReLU",
   [](float x){
-    return (0.0f < x) ? x:0.01f * x;
+    return (0.0f < x) ? x:LeakyReLU_status::alpha * x;
   },
   [](float z,float a){
-    return (0.0f < z) ? 1.0f:0.01f;
+    return (0.0f < z) ? 1.0f:LeakyReLU_status::alpha;
   }
 };
 
