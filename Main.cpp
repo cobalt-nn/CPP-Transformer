@@ -47,13 +47,14 @@ std::vector<float> makeTenVector(int i){
 }
 
 int main(){
-  const ops::Activation act = ops::activations::LeakyReLU;
+  const ops::Activation act = ops::activations::GELU;
 
   Model m;
 
   m.add<layer::Dense>(784,256,act)
    .add<layer::Dense>(256,64,act)
-   .add<layer::Dense>(64,10,act)
+   .add<layer::Linear>(64,10,true)
+   //.add<layer::Dense>(64,10,act)
    .add<layer::Softmax>();
 
   const size_t MNIST_size = 60000;
@@ -89,15 +90,19 @@ int main(){
 
   const float lr = 0.01;
 
+  size_t total = input.size();
+
   auto start = std::chrono::high_resolution_clock::now();
 
-  for(size_t i = 0;i < input.size();i++){
-    const tensor::Tensor &output = m.forward(input[i]);
-    m.backward(output - target[i]);
+  for(int j = 0;j < 100;j++){
+    for(size_t i = 0;i < total - 300;i++){
+      const tensor::Tensor &output = m.forward(input[i]);
+      m.backward(output - target[i]);
 
-    m.step(lr);
+      m.step(lr);
 
-    m.zero_grad();
+      m.zero_grad();
+    }
   }
 
   auto end = std::chrono::high_resolution_clock::now();
@@ -107,12 +112,16 @@ int main(){
   std::cout << "time: " << time << "ms\n";
 
   double total_loss = 0.0;
+  double total_conf = 0.0;
+  double max_conf = 0.0;
+  double min_conf = 0.0;
   int correct = 0;
-  size_t total = input.size();
+
+  bool first = true;
 
   size_t sample_num = 0;
 
-  for(size_t i = 0;i < total;i++){
+  for(size_t i = total - 300;i < total;i++){
     const tensor::Tensor &output = m.forward(input[i]);
 
     sample_num += input[i].dim(0);
@@ -120,39 +129,55 @@ int main(){
     for(int64_t row = 0;row < output.dim(0);row++){
       int max_index = -1;
       int target_i = -1;
-      float max_element = 0.0f;
+      double max_element = 0.0;
 
       for(int64_t col = 0;col < output.dim(1);col++){
-        float out_at = output.at({row,col});
-        float tar_at = target[i].at({row,col});
+        double out_at = output.at({row,col});
+        double tar_at = target[i].at({row,col});
 
         if(tar_at > 0.99f) target_i = col;
 
-        if(max_element < out_at && out_at > 0.8f){
+        if(max_element < out_at){// && out_at > 0.8f){
           max_element = out_at;
           max_index = col;
         }
 
-        float sub = out_at - tar_at;
+        double sub = out_at - tar_at;
 
-        //total_loss += sub * sub;//MSE
+        //double loss = sub * sub;//MSE
+        double loss = -std::log(out_at + 1e-8f) * tar_at;//Cross Entropy
 
-        total_loss -= std::log(out_at) * tar_at;//Cross Entropy
+        total_loss += loss;
       }
 
-      if(target_i == max_index) correct++;
+      if(target_i == max_index){
+        correct++;
+        total_conf += max_element;
+
+        if(first){
+          first = false;
+
+          max_conf = min_conf = max_element;
+        }
+
+        if(max_conf < max_element) max_conf = max_element;
+        if(min_conf > max_element) min_conf = max_element;
+      }
     }
 
     /*tensor::Tensor t = output - target[i];
     t.hadamard_(t);
 
-    for(float f:t.span()){
+    for(double f:t.span()){
       total_loss += f;
     }*/
   }
 
   std::cout << "loss:" << total_loss / sample_num << std::endl;
-  std::cout << "correct:" << correct / static_cast<float>(sample_num) << std::endl;
+  std::cout << "conf:" << total_conf / sample_num << std::endl;
+  std::cout << "max conf:" << max_conf << std::endl;
+  std::cout << "min conf:" << min_conf << std::endl;
+  std::cout << "correct:" << correct / static_cast<double>(sample_num) << std::endl;
 
   return 0;
 }
